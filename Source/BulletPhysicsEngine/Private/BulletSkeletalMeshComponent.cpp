@@ -2,6 +2,7 @@
 #include "DrawDebugHelpers.h"
 #include "Math/Rotator.h"
 #include "PhysicsEngine/PhysicsAsset.h"
+#include "PhysicsEngine/SkeletalBodySetup.h"
 
 // TODO: Lots of duplication here, have to move most of the code here into a base class and inherit
 
@@ -183,7 +184,7 @@ void UBulletSkeletalMeshComponent::BulletSetWorldTransform(FTransform WorldTrans
 	BulletOwnerRigidBody->setWorldTransform(BulletHelpers::ToBt(WorldTransform,FVector(0)));
 }
 
-float UBulletSkeletalMeshComponent::BulletGetBodyMass() 
+float UBulletSkeletalMeshComponent::BulletGetBodyMass()
 {
 	if (!BulletOwnerRigidBody){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSkeletalMeshComponent::GetMass: Owning body is null."));
@@ -192,7 +193,7 @@ float UBulletSkeletalMeshComponent::BulletGetBodyMass()
 	return BulletOwnerRigidBody->getMass();
 }
 
-FVector UBulletSkeletalMeshComponent::BulletGetVelocityAt(FVector LocationLS) 
+FVector UBulletSkeletalMeshComponent::BulletGetVelocityAt(FVector LocationLS)
 {
 	if (!BulletOwnerRigidBody){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSkeletalMeshComponent::BulletGetVelocityAt: Owning body is null."));
@@ -203,7 +204,7 @@ FVector UBulletSkeletalMeshComponent::BulletGetVelocityAt(FVector LocationLS)
 			FVector(0));
 }
 
-void UBulletSkeletalMeshComponent::BulletSetMass(float NewMass) 
+void UBulletSkeletalMeshComponent::BulletSetMass(float NewMass)
 {
 	if (!BulletOwnerRigidBody){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSkeletalMeshComponent::BulletSetMass: Owning body is null."));
@@ -214,7 +215,7 @@ void UBulletSkeletalMeshComponent::BulletSetMass(float NewMass)
 	BulletOwnerRigidBody->setMassProps(NewMass,inertia);
 }
 
-void UBulletSkeletalMeshComponent::BulletApplyTorqueImpulse(FVector torque) 
+void UBulletSkeletalMeshComponent::BulletApplyTorqueImpulse(FVector torque)
 {
 	if (!BulletOwnerRigidBody){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSkeletalMeshComponent::BulletApplyTorqueTurnImpulse: Owning body is null."));

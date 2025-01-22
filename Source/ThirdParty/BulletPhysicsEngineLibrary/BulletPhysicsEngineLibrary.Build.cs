@@ -24,13 +24,13 @@ public class BulletPhysicsEngineLibrary : ModuleRules
 		System.Console.WriteLine("Bullet thirdparty directory: " + ThirdPartyBulletPath);
 
 		var cmakeOptions = "";
-		cmakeOptions += " -DUSE_DOUBLE_PRECISION=1 "; 
+		cmakeOptions += " -DUSE_DOUBLE_PRECISION=1 ";
 		//Don't forget to take out the definition
 		// #define BT_USE_DOUBLE_PRECISION in BulletMain.h if you disable DOUBLE_PRECISION
 		// TODO: Too lazy to add it as a definition here.
-		cmakeOptions += " -DINSTALL_LIBS=0 "; 
-		cmakeOptions += " -DINSTALL_EXTRA_LIBS=0 "; 
-		cmakeOptions += " -DLIBRARY_OUTPUT_PATH=\""+LibOutputPath + "\""; 
+		cmakeOptions += " -DINSTALL_LIBS=0 ";
+		cmakeOptions += " -DINSTALL_EXTRA_LIBS=0 ";
+		cmakeOptions += " -DLIBRARY_OUTPUT_PATH=\""+LibOutputPath + "\"";
 		cmakeOptions += " -DCMAKE_BUILD_TYPE="+BuildUtils.GetBuildType(BuildType);
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
@@ -45,9 +45,9 @@ public class BulletPhysicsEngineLibrary : ModuleRules
 		else if (Target.Platform == UnrealTargetPlatform.Linux)
 		{
 			cmakeOptions += " -DCMAKE_POSITION_INDEPENDENT_CODE=1 ";
-			cmakeOptions += " -DBUILD_SHARED_LIBS=0 "; 
-			cmakeOptions += " -DCMAKE_CXX_COMPILER=/usr/bin/clang++ "; 
-			cmakeOptions += " -DCMAKE_C_COMPILER=/usr/bin/clang "; 
+			cmakeOptions += " -DBUILD_SHARED_LIBS=0 ";
+			cmakeOptions += " -DCMAKE_CXX_COMPILER=/usr/bin/clang++ ";
+			cmakeOptions += " -DCMAKE_C_COMPILER=/usr/bin/clang ";
 
 		}else {
 			System.Console.WriteLine("[ERROR] You are trying to build Bullet for a not yet supported platform: `" +

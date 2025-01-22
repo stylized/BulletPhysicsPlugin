@@ -18,14 +18,37 @@
 
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 
+class UBulletPhysicsComponent;
+
+struct FClosestRayResultWithExclude : btCollisionWorld::ClosestRayResultCallback
+{
+	FClosestRayResultWithExclude(const btVector3& rayFromWorld, const btVector3& rayToWorld, const btCollisionObject* excludeObject)
+		: btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld)
+		, m_excludeObject(excludeObject)
+	{
+	}
+
+	virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override
+	{
+		if (rayResult.m_collisionObject == m_excludeObject)
+		{
+			return 1.0;
+		}
+		return btCollisionWorld::ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+	}
+
+	const btCollisionObject* m_excludeObject;
+};
 
 UCLASS()
 	class BULLETPHYSICSENGINE_API UBulletSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 
-	public:	
+	public:
+		static inline FOnPhysicsTick OnPhysicsTickDelegate;
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void AddStaticBody(AActor* Body, float Friction, float Restitution,int &ID);
@@ -49,7 +72,7 @@ UCLASS()
 			void AddForce(int ID, FVector Impulse, FVector Location);
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
-			void StepPhysics(float deltaSeconds, int maxSubSteps = 1, float fixedTimeStep = 0.016666667f);
+			void StepPhysics(float DeltaSeconds, float FixedTimeStep = 0.0078125f);
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void SetPhysicsState(int ID, FTransform transforms, FVector Velocity, FVector AngularVelocity,FVector& Force);
@@ -68,7 +91,7 @@ UCLASS()
 
 		// Input the fixed frame rate to calculate physics
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
-			float PhysicsRefreshRate =60.0f;
+			float PhysicsRefreshRate = 128.0f;
 
 		// This is independent of the frame rate in UE
 		UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Bullet Physics|Objects")
@@ -76,7 +99,7 @@ UCLASS()
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
 			int SubSteps=1;
-	
+
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
 			float RandVar;
 
@@ -93,12 +116,18 @@ UCLASS()
 
 		void RayTest(FVector Start, FVector End,std::function<void(const FVector&, const FVector&, const bool&)> HitCallback);
 
+		btCollisionWorld::AllHitsRayResultCallback RayTestAll(FVector Start, FVector End);
+
+		FClosestRayResultWithExclude RayTest(FVector Start, FVector End, const btCollisionObject* ExcludeObject);
+
+		btCollisionWorld::ClosestRayResultCallback RayTest(FVector Start, FVector End);
+
 		virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 		virtual void Deinitialize() override;
 
 		virtual void OnWorldBeginPlay(UWorld& InWorld) override;
-	
+
 		virtual void Tick(float deltaTime) override;
 
 		virtual TStatId GetStatId() const override;
@@ -148,7 +177,6 @@ private:
 
 		TArray<btRigidBody*> BtRigidBodies;
 
-		float Accumulator = 0.0f;
 	public:
 		btDiscreteDynamicsWorld* GetBulletWorld() const {return BtWorld;};
 
@@ -163,6 +191,8 @@ private:
 		btCollisionShape* GetTriangleMeshShape(TArray<FVector> a, TArray<FVector> b, TArray<FVector> c, TArray<FVector> d);
 
 		btCollisionShape* GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale);
+
+		btRigidBody* AddRigidBody(AActor* Body, float Friction, float Restitution, float Mass);
 
 		btRigidBody* AddRigidBody(AActor* Actor, const UBulletSubsystem::CachedDynamicShapeData& ShapeData, float Friction, float Restitution);
 

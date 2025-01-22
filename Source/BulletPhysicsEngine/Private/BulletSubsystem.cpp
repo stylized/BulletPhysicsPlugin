@@ -25,6 +25,10 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	BtConstraintSolver = mt;
 	BtWorld = new btDiscreteDynamicsWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
 	BtWorld->setGravity(btVector3(Gravity.X,Gravity.Y, Gravity.Z));
+	BtWorld->setInternalTickCallback([](btDynamicsWorld *BtWorld, btScalar TimeStep)
+	{
+		OnPhysicsTickDelegate.Broadcast(TimeStep);
+	}, nullptr, true);
 
 	UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: Bullet world init"));
 
@@ -37,7 +41,7 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 
 
 void UBulletSubsystem::Deinitialize() {
-	
+
 }
 
 void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -58,13 +62,14 @@ void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		// Check if the actor has a UStaticMeshComponent directly
 		if (actor->ActorHasTag(bulletStaticTag))
 		{
-			AddStaticBody(actor,0.5,0.9,dummyID);
-		}else if (actor->ActorHasTag(bulletDynamicTag))
+			AddStaticBody(actor, 0.5f, 0.f, dummyID);
+		}
+		else if (actor->ActorHasTag(bulletDynamicTag))
 		{
-			AddRigidBody(actor,0.5,0.9,dummyID, 10.f);
+			AddRigidBody(actor, 0.5f, 0.f, dummyID, 10.f);
 		}
 	}
-	
+
 }
 
 void UBulletSubsystem::Tick(float deltaTime)
@@ -87,9 +92,15 @@ void UBulletSubsystem::EnableDebugDrawer(){
 }
 
 
-void UBulletSubsystem::StepPhysics(float deltaSeconds, int maxSubSteps, float fixedTimeStep)
+void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 {
-	BtWorld->stepSimulation(deltaSeconds,maxSubSteps,fixedTimeStep);
+	float TimeAccumulated = DeltaSeconds;
+
+	while (TimeAccumulated > 0.f)
+	{
+		BtWorld->stepSimulation(FMath::Min(TimeAccumulated, FixedTimeStep), 1, FixedTimeStep);
+		TimeAccumulated -= FixedTimeStep;
+	}
 
 #if WITH_EDITOR
 	if (DebugEnabled) {
@@ -151,10 +162,15 @@ void UBulletSubsystem::UpdateProcBody(AActor* Body, float Friction, TArray<FVect
 
 
 
-void UBulletSubsystem::AddRigidBody(AActor* Body, float Friction, float Restitution, int& ID,float mass)
+void UBulletSubsystem::AddRigidBody(AActor* Body, float Friction, float Restitution, int& ID, float mass)
 {
 	AddRigidBody(Body, GetCachedDynamicShapeData(Body, mass), Friction, Restitution);
 	ID = BtRigidBodies.Num() - 1;
+}
+
+btRigidBody* UBulletSubsystem::AddRigidBody(AActor* Body, float Friction, float Restitution, float Mass)
+{
+	return AddRigidBody(Body, GetCachedDynamicShapeData(Body, Mass), Friction, Restitution);
 }
 
 
@@ -202,7 +218,9 @@ void UBulletSubsystem::ExtractPhysicsGeometry(AActor* Actor, PhysicsGeometryCall
 {
 	TInlineComponentArray<UActorComponent*, 20> Components;
 	// Used to easily get a component's transform relative to actor, not parent component
-	const FTransform InvActorTransform = Actor->GetActorTransform().Inverse();
+	const FTransform ActorTransform = Actor->GetActorTransform();
+	const FTransform NoScaleTransform(ActorTransform.GetRotation(), ActorTransform.GetTranslation());
+	const FTransform InvActorTransform = NoScaleTransform.Inverse();
 
 	// Collisions from meshes
 
@@ -262,9 +280,9 @@ void UBulletSubsystem::ExtractPhysicsGeometry(const FTransform& XformSoFar, UBod
 		//TODO: find a better way to represent planes in unreal maybe?
 		if (Scale.Z==0) {
 			btVector3 planeNormal(0,0,1);
-			Shape = new btStaticPlaneShape(planeNormal, 0);	
+			Shape = new btStaticPlaneShape(planeNormal, 0);
 			UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: creating plane"));
-		}else { 
+		}else {
 			// We'll re-use based on just the LxWxH, including actor scale
 			// Rotation and centre will be baked in world space
 			UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: creating box"));
@@ -396,7 +414,7 @@ btCollisionShape* UBulletSubsystem::GetTriangleMeshShape(TArray<FVector> a, TArr
 btCollisionShape* UBulletSubsystem::GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale)
 {
 	for (auto&& S : BtConvexHullCollisionShapes)
-	{ 
+	{
 		if (S.BodySetup == BodySetup && S.HullIndex == ConvexIndex && S.Scale.Equals(Scale))
 		{
 			return S.Shape;
@@ -407,9 +425,9 @@ btCollisionShape* UBulletSubsystem::GetConvexHullCollisionShape(UBodySetup* Body
 	auto C = new btConvexHullShape();
 	for (auto&& P : Elem.VertexData)
 	{
-		C->addPoint(BulletHelpers::ToBtPos(P, FVector::ZeroVector));
+		C->addPoint(BulletHelpers::ToBtPos(P * Scale, FVector::ZeroVector));
 	}
-	// Very important! Otherwise there's a gap between 
+	// Very important! Otherwise there's a gap between
 	C->setMargin(0);
 	// Apparently this is good to call?
 	C->initializePolyhedralFeatures();
@@ -439,7 +457,7 @@ const UBulletSubsystem::CachedDynamicShapeData& UBulletSubsystem::GetCachedDynam
 	TArray<btCollisionShape*, TInlineAllocator<20>> Shapes;
 	TArray<FTransform, TInlineAllocator<20>> ShapeRelXforms;
 	ExtractPhysicsGeometry(Actor,
-			[&Shapes, &ShapeRelXforms](btCollisionShape* Shape, const FTransform& RelTransform)
+			[&Shapes, &ShapeRelXforms, Actor](btCollisionShape* Shape, const FTransform& RelTransform)
 			{
 			Shapes.Add(Shape);
 			ShapeRelXforms.Add(RelTransform);
@@ -497,6 +515,10 @@ btRigidBody* UBulletSubsystem::AddRigidBody(AActor* Actor, btCollisionShape* Col
 	body->setUserPointer(Actor);
 	body->setActivationState(DISABLE_DEACTIVATION);
 	body->setDeactivationTime(0);
+	body->setFriction(Friction);
+	body->setRollingFriction(Friction);
+	body->setSpinningFriction(Friction);
+	body->setRestitution(Restitution);
 	BtWorld->addRigidBody(body);
 	BtRigidBodies.Add(body);
 	return body;
@@ -551,30 +573,56 @@ btCollisionObject* UBulletSubsystem::GetStaticObject(int ID)
 	return BtStaticObjects[ID];
 }
 
-void UBulletSubsystem::RayTest(FVector Start, FVector End,std::function<void(const FVector&, const FVector&, const bool&)> HitCallback)
-{// Set up the raycast parameters
-	if (!BtWorld) {
-		UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem::RayTestSingle: loaded wihout a bullet world't work"));
-		return;
-	} 
+btCollisionWorld::AllHitsRayResultCallback UBulletSubsystem::RayTestAll(FVector Start, FVector End)
+{
+	// Set up the raycast parameters
+	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
+	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
+	btCollisionWorld::AllHitsRayResultCallback rayCallback(fromV, toV);
 
+	btTransform fromTransform, toTransform;
+
+	BtWorld->rayTest(fromV, toV, rayCallback);
+
+	return rayCallback;
+}
+
+FClosestRayResultWithExclude UBulletSubsystem::RayTest(FVector Start, FVector End, const btCollisionObject* ExcludeObject)
+{
+	// Set up the raycast parameters
+	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
+	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
+	FClosestRayResultWithExclude rayCallback(fromV, toV, ExcludeObject);
+
+	btTransform fromTransform, toTransform;
+
+	BtWorld->rayTest(fromV, toV, rayCallback);
+
+	return rayCallback;
+}
+
+btCollisionWorld::ClosestRayResultCallback UBulletSubsystem::RayTest(FVector Start, FVector End)
+{
+	// Set up the raycast parameters
 	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
 	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
 	btCollisionWorld::ClosestRayResultCallback rayCallback(fromV, toV);
 
 	btTransform fromTransform, toTransform;
 
-	BtWorld->rayTest(
-			fromV,
-			toV,
-			rayCallback
-			);
+	BtWorld->rayTest(fromV, toV, rayCallback);
+
+	return rayCallback;
+}
+
+void UBulletSubsystem::RayTest(FVector Start, FVector End,std::function<void(const FVector&, const FVector&, const bool&)> HitCallback)
+{
+	const btCollisionWorld::ClosestRayResultCallback rayCallback = RayTest(Start, End);
 
 	HitCallback(
 			BulletHelpers::ToUEPos(rayCallback.m_hitPointWorld, FVector(0)),
 			BulletHelpers::ToUEPos(rayCallback.m_hitNormalWorld, FVector(0)),
-			rayCallback.hasHit()
-			);
+			rayCallback.hasHit());
 }
 
 void UBulletSubsystem::RayTestSingle(FVector Start, FVector End, int CheckObjectID,std::function<void(const FVector&, const FVector&, const bool&)> HitCallback)
@@ -582,7 +630,7 @@ void UBulletSubsystem::RayTestSingle(FVector Start, FVector End, int CheckObject
 	if (!BtWorld) {
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem::RayTestSingle: loaded wihout a bullet world't work"));
 		return;
-	} 
+	}
 
 	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
 	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
