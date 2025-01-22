@@ -45,6 +45,11 @@ FVector UBulletPhysicsComponent::GetLinearVelocity() const
 	return BulletHelpers::ToUEDir(RigidBody->getLinearVelocity());
 }
 
+FVector UBulletPhysicsComponent::GetAngularVelocity() const
+{
+	return BulletHelpers::ToUEDir(RigidBody->getAngularVelocity());
+}
+
 FVector UBulletPhysicsComponent::GetVelocityAtOffset(FVector Offset) const
 {
 	return BulletHelpers::ToUEDir(RigidBody->getVelocityInLocalPoint(BulletHelpers::ToBtPos(Offset, FVector::ZeroVector)));

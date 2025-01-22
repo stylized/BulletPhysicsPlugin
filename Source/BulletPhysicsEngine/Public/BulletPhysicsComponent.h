@@ -18,6 +18,7 @@ public:
 	void AddCentralForce(FVector Force);
 	void AddCentralImpulse(FVector Impulse);
 	FVector GetLinearVelocity() const;
+	FVector GetAngularVelocity() const;
 	FVector GetVelocityAtOffset(FVector Offset) const;
 
 	virtual void TickPhysics(float DeltaTime)
