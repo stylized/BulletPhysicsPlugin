@@ -13,6 +13,7 @@ public:
 	virtual void BeginPlay() override;
 
 	void AddForce(FVector Force, FVector Offset);
+	void AddTorque(FVector Torque);
 	void AddImpulse(FVector Impulse, FVector Offset);
 	void AddCentralForce(FVector Force);
 	void AddCentralImpulse(FVector Impulse);

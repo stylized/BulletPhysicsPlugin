@@ -17,22 +17,27 @@ void UBulletPhysicsComponent::BeginPlay()
 
 void UBulletPhysicsComponent::AddForce(FVector Force, FVector Offset)
 {
-	RigidBody->applyForce(BulletHelpers::ToBtDir(Force, true), BulletHelpers::ToBtPos(Offset, FVector::ZeroVector));
+	RigidBody->applyForce(BulletHelpers::ToBtDir(Force), BulletHelpers::ToBtPos(Offset, FVector::ZeroVector));
+}
+
+void UBulletPhysicsComponent::AddTorque(FVector Torque)
+{
+	RigidBody->applyTorque(BulletHelpers::ToBtDir(Torque));
 }
 
 void UBulletPhysicsComponent::AddImpulse(FVector Impulse, FVector Offset)
 {
-	RigidBody->applyImpulse(BulletHelpers::ToBtDir(Impulse, true), BulletHelpers::ToBtPos(Offset, FVector::ZeroVector));
+	RigidBody->applyImpulse(BulletHelpers::ToBtDir(Impulse), BulletHelpers::ToBtPos(Offset, FVector::ZeroVector));
 }
 
 void UBulletPhysicsComponent::AddCentralForce(FVector Force)
 {
-	RigidBody->applyCentralForce(BulletHelpers::ToBtDir(Force, true));
+	RigidBody->applyCentralForce(BulletHelpers::ToBtDir(Force));
 }
 
 void UBulletPhysicsComponent::AddCentralImpulse(FVector Impulse)
 {
-	RigidBody->applyCentralImpulse(BulletHelpers::ToBtDir(Impulse, true));
+	RigidBody->applyCentralImpulse(BulletHelpers::ToBtDir(Impulse));
 }
 
 FVector UBulletPhysicsComponent::GetLinearVelocity() const
