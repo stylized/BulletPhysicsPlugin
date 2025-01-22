@@ -21,6 +21,7 @@ PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
 
 #include <btBulletDynamicsCommon.h>
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btCylinderShape.h>
 
 // Forward decl for everything else we use
 class btCollisionConfiguration;
@@ -31,6 +32,7 @@ class btDynamicsWorld;
 class btCollisionShape;
 class btBoxShape;
 class btCapsuleShape;
+class btCylinderShape;
 class btConvexHullShape;
 class btCompoundShape;
 class btSphereShape;

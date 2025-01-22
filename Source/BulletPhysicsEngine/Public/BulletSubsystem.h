@@ -42,6 +42,26 @@ struct FClosestRayResultWithExclude : btCollisionWorld::ClosestRayResultCallback
 	const btCollisionObject* m_excludeObject;
 };
 
+struct FClosestConvexResultWithExclude : btCollisionWorld::ClosestConvexResultCallback
+{
+	FClosestConvexResultWithExclude(const btVector3& convexFromWorld, const btVector3& convexToWorld, const btCollisionObject* excludeObject)
+		: btCollisionWorld::ClosestConvexResultCallback(convexFromWorld, convexToWorld)
+		, m_excludeObject(excludeObject)
+	{
+	}
+
+	virtual btScalar addSingleResult(btCollisionWorld::LocalConvexResult& convexResult, bool normalInWorldSpace) override
+	{
+		if (convexResult.m_hitCollisionObject == m_excludeObject)
+		{
+			return 1.0;
+		}
+		return btCollisionWorld::ClosestConvexResultCallback::addSingleResult(convexResult, normalInWorldSpace);
+	}
+
+	const btCollisionObject* m_excludeObject;
+};
+
 UCLASS()
 	class BULLETPHYSICSENGINE_API UBulletSubsystem : public UTickableWorldSubsystem
 {
@@ -122,6 +142,8 @@ UCLASS()
 
 		btCollisionWorld::ClosestRayResultCallback RayTest(FVector Start, FVector End);
 
+		FClosestConvexResultWithExclude ConvexSweepTest(const btConvexShape* CastShape, FTransform Start, FTransform End, const btCollisionObject* ExcludeObject);
+
 		virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 		virtual void Deinitialize() override;
@@ -154,6 +176,9 @@ private:
 		TArray<btBoxShape*> BtBoxCollisionShapes;
 		TArray<btSphereShape*> BtSphereCollisionShapes;
 		TArray<btCapsuleShape*> BtCapsuleCollisionShapes;
+		TArray<btCylinderShape*> BtCylinderCollisionShapes;
+		TArray<btCylinderShape*> BtCylinderCollisionShapesX;
+		TArray<btCylinderShape*> BtCylinderCollisionShapesZ;
 		btSequentialImpulseConstraintSolver* mt;
 		// Structure to hold re-usable ConvexHull shapes based on origin BodySetup / subindex / scale
 		struct ConvexHullShapeHolder
@@ -182,15 +207,21 @@ private:
 
 		void RayTestSingle(FVector Start, FVector End, int CheckObjectID, void (*HitCallback)(const FVector&, const FVector&));
 
-		btCollisionShape* GetBoxCollisionShape(const FVector& Dimensions);
+		btBoxShape* GetBoxCollisionShape(const FVector& Dimensions);
 
-		btCollisionShape* GetSphereCollisionShape(float Radius);
+		btSphereShape* GetSphereCollisionShape(float Radius);
 
-		btCollisionShape* GetCapsuleCollisionShape(float Radius, float Height);
+		btCapsuleShape* GetCapsuleCollisionShape(float Radius, float Height);
 
-		btCollisionShape* GetTriangleMeshShape(TArray<FVector> a, TArray<FVector> b, TArray<FVector> c, TArray<FVector> d);
+		btCylinderShape* GetCylinderCollisionShape(float Radius, float Height);
 
-		btCollisionShape* GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale);
+		btCylinderShape* GetCylinderCollisionShapeX(float Radius, float Height);
+
+		btCylinderShape* GetCylinderCollisionShapeZ(float Radius, float Height);
+
+		btBvhTriangleMeshShape* GetTriangleMeshShape(TArray<FVector> a, TArray<FVector> b, TArray<FVector> c, TArray<FVector> d);
+
+		btConvexHullShape* GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale);
 
 		btRigidBody* AddRigidBody(AActor* Body, float Friction, float Restitution, float Mass);
 

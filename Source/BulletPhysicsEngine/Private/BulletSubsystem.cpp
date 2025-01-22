@@ -86,7 +86,8 @@ TStatId UBulletSubsystem::GetStatId() const
 
 
 
-void UBulletSubsystem::EnableDebugDrawer(){
+void UBulletSubsystem::EnableDebugDrawer()
+{
 	BtDebugDraw = new BulletDebugDraw(GetWorld(), UE_WORLD_ORIGIN);
 	BtWorld->setDebugDrawer(BtDebugDraw);
 }
@@ -324,7 +325,7 @@ void UBulletSubsystem::ExtractPhysicsGeometry(const FTransform& XformSoFar, UBod
 
 }
 
-btCollisionShape* UBulletSubsystem::GetBoxCollisionShape(const FVector& Dimensions)
+btBoxShape* UBulletSubsystem::GetBoxCollisionShape(const FVector& Dimensions)
 {
 	// Simple brute force lookup for now, probably doesn't need anything more clever
 	btVector3 HalfSize = BulletHelpers::ToBtSize(Dimensions * 0.5);
@@ -349,7 +350,7 @@ btCollisionShape* UBulletSubsystem::GetBoxCollisionShape(const FVector& Dimensio
 
 }
 
-btCollisionShape* UBulletSubsystem::GetSphereCollisionShape(float Radius)
+btSphereShape* UBulletSubsystem::GetSphereCollisionShape(float Radius)
 {
 	// Simple brute force lookup for now, probably doesn't need anything more clever
 	btScalar Rad = BulletHelpers::ToBtSize(Radius);
@@ -372,7 +373,7 @@ btCollisionShape* UBulletSubsystem::GetSphereCollisionShape(float Radius)
 
 }
 
-btCollisionShape* UBulletSubsystem::GetCapsuleCollisionShape(float Radius, float Height)
+btCapsuleShape* UBulletSubsystem::GetCapsuleCollisionShape(float Radius, float Height)
 {
 	// Simple brute force lookup for now, probably doesn't need anything more clever
 	btScalar R = BulletHelpers::ToBtSize(Radius);
@@ -397,7 +398,79 @@ btCollisionShape* UBulletSubsystem::GetCapsuleCollisionShape(float Radius, float
 
 }
 
-btCollisionShape* UBulletSubsystem::GetTriangleMeshShape(TArray<FVector> a, TArray<FVector> b, TArray<FVector> c, TArray<FVector> d)
+btCylinderShape* UBulletSubsystem::GetCylinderCollisionShape(float Radius, float Height)
+{
+	// Simple brute force lookup for now, probably doesn't need anything more clever
+	btScalar R = BulletHelpers::ToBtSize(Radius);
+	btScalar H = BulletHelpers::ToBtSize(Height);
+	btScalar HalfH = H * 0.5f;
+
+	for (auto&& S : BtCylinderCollisionShapes)
+	{
+		// Bullet subtracts a margin from its internal shape, so add back to compare
+		if (FMath::IsNearlyEqual(S->getRadius(), R) &&
+				FMath::IsNearlyEqual(S->getHalfExtentsWithMargin().getY(), HalfH))
+		{
+			return S;
+		}
+	}
+
+	// Not found, create
+	auto S = new btCylinderShape(btVector3(R, HalfH, R));
+	BtCylinderCollisionShapes.Add(S);
+
+	return S;
+}
+
+btCylinderShape* UBulletSubsystem::GetCylinderCollisionShapeX(float Radius, float Height)
+{
+	// Simple brute force lookup for now, probably doesn't need anything more clever
+	btScalar R = BulletHelpers::ToBtSize(Radius);
+	btScalar H = BulletHelpers::ToBtSize(Height);
+	btScalar HalfH = H * 0.5f;
+
+	for (auto&& S : BtCylinderCollisionShapes)
+	{
+		// Bullet subtracts a margin from its internal shape, so add back to compare
+		if (FMath::IsNearlyEqual(S->getRadius(), R) &&
+				FMath::IsNearlyEqual(S->getHalfExtentsWithMargin().getX(), HalfH))
+		{
+			return S;
+		}
+	}
+
+	// Not found, create
+	auto S = new btCylinderShapeX(btVector3(HalfH, R, R));
+	BtCylinderCollisionShapes.Add(S);
+
+	return S;
+}
+
+btCylinderShape* UBulletSubsystem::GetCylinderCollisionShapeZ(float Radius, float Height)
+{
+	// Simple brute force lookup for now, probably doesn't need anything more clever
+	btScalar R = BulletHelpers::ToBtSize(Radius);
+	btScalar H = BulletHelpers::ToBtSize(Height);
+	btScalar HalfH = H * 0.5f;
+
+	for (auto&& S : BtCylinderCollisionShapes)
+	{
+		// Bullet subtracts a margin from its internal shape, so add back to compare
+		if (FMath::IsNearlyEqual(S->getRadius(), R) &&
+				FMath::IsNearlyEqual(S->getHalfExtentsWithMargin().getZ(), HalfH))
+		{
+			return S;
+		}
+	}
+
+	// Not found, create
+	auto S = new btCylinderShapeZ(btVector3(R, R, HalfH));
+	BtCylinderCollisionShapes.Add(S);
+
+	return S;
+}
+
+btBvhTriangleMeshShape* UBulletSubsystem::GetTriangleMeshShape(TArray<FVector> a, TArray<FVector> b, TArray<FVector> c, TArray<FVector> d)
 {
 	btTriangleMesh* triangleMesh = new btTriangleMesh();
 
@@ -411,7 +484,7 @@ btCollisionShape* UBulletSubsystem::GetTriangleMeshShape(TArray<FVector> a, TArr
 	return Trimesh;
 }
 
-btCollisionShape* UBulletSubsystem::GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale)
+btConvexHullShape* UBulletSubsystem::GetConvexHullCollisionShape(UBodySetup* BodySetup, int ConvexIndex, const FVector& Scale)
 {
 	for (auto&& S : BtConvexHullCollisionShapes)
 	{
@@ -573,14 +646,24 @@ btCollisionObject* UBulletSubsystem::GetStaticObject(int ID)
 	return BtStaticObjects[ID];
 }
 
+FClosestConvexResultWithExclude UBulletSubsystem::ConvexSweepTest(const btConvexShape* CastShape, FTransform Start, FTransform End, const btCollisionObject* ExcludeObject)
+{
+	// Set up the sweep parameters
+	btTransform fromTransform = BulletHelpers::ToBt(Start, FVector(0));
+	btTransform toTransform = BulletHelpers::ToBt(End, FVector(0));
+	FClosestConvexResultWithExclude convexCallback(fromTransform.getOrigin(), toTransform.getOrigin(), ExcludeObject);
+
+	BtWorld->convexSweepTest(CastShape, fromTransform, toTransform, convexCallback);
+
+	return convexCallback;
+}
+
 btCollisionWorld::AllHitsRayResultCallback UBulletSubsystem::RayTestAll(FVector Start, FVector End)
 {
 	// Set up the raycast parameters
 	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
 	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
 	btCollisionWorld::AllHitsRayResultCallback rayCallback(fromV, toV);
-
-	btTransform fromTransform, toTransform;
 
 	BtWorld->rayTest(fromV, toV, rayCallback);
 
@@ -594,8 +677,6 @@ FClosestRayResultWithExclude UBulletSubsystem::RayTest(FVector Start, FVector En
 	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
 	FClosestRayResultWithExclude rayCallback(fromV, toV, ExcludeObject);
 
-	btTransform fromTransform, toTransform;
-
 	BtWorld->rayTest(fromV, toV, rayCallback);
 
 	return rayCallback;
@@ -607,8 +688,6 @@ btCollisionWorld::ClosestRayResultCallback UBulletSubsystem::RayTest(FVector Sta
 	btVector3 fromV = BulletHelpers::ToBtPos(Start, FVector(0));
 	btVector3 toV = BulletHelpers::ToBtPos(End, FVector(0));
 	btCollisionWorld::ClosestRayResultCallback rayCallback(fromV, toV);
-
-	btTransform fromTransform, toTransform;
 
 	BtWorld->rayTest(fromV, toV, rayCallback);
 
