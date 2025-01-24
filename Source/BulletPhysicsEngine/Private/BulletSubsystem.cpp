@@ -4,6 +4,8 @@
 #include "BulletSubsystem.h"
 
 #include "EngineUtils.h"
+#include "PhysicsEngine/PhysicsAsset.h"
+#include "PhysicsEngine/SkeletalBodySetup.h"
 
 
 const FVector UE_WORLD_ORIGIN = FVector(0);
@@ -231,6 +233,12 @@ void UBulletSubsystem::ExtractPhysicsGeometry(AActor* Actor, PhysicsGeometryCall
 		ExtractPhysicsGeometry(Cast<UStaticMeshComponent>(Comp), InvActorTransform, CB);
 	}
 
+	Actor->GetComponents(USkeletalMeshComponent::StaticClass(), Components);
+	for (auto&& Comp : Components)
+	{
+		ExtractPhysicsGeometry(Cast<USkeletalMeshComponent>(Comp), InvActorTransform, CB);
+	}
+
 	// Collisions from separate collision components
 	Actor->GetComponents(UShapeComponent::StaticClass(), Components);
 	for (auto&& Comp : Components)
@@ -258,6 +266,22 @@ void UBulletSubsystem::ExtractPhysicsGeometry(UStaticMeshComponent* SMC, const F
 	// Looks like we have to access LODForCollision, RenderData->LODResources
 	// So they use a mesh LOD for collision for complex shapes, never drawn usually?
 
+}
+
+
+void UBulletSubsystem::ExtractPhysicsGeometry(USkeletalMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
+{
+	UPhysicsAsset* PhysicsAsset = SMC->GetPhysicsAsset();
+	if (!PhysicsAsset)
+		return;
+
+	// We want the complete transform from actor to this component, not just relative to parent
+	FTransform CompFullRelXForm = SMC->GetComponentTransform() * InvActorXform;
+
+	for (USkeletalBodySetup* BodySetup : PhysicsAsset->SkeletalBodySetups)
+	{
+		ExtractPhysicsGeometry(CompFullRelXForm, Cast<UBodySetup>(BodySetup), CB);
+	}
 }
 
 
