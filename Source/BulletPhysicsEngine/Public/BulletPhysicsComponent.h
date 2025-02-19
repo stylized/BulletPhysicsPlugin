@@ -12,16 +12,26 @@ class BULLETPHYSICSENGINE_API UBulletPhysicsComponent : public UActorComponent
 public:
 	virtual void BeginPlay() override;
 
-	void AddForce(FVector Force, FVector Offset);
-	void AddTorque(FVector Torque);
-	void AddImpulse(FVector Impulse, FVector Offset);
-	void AddCentralForce(FVector Force);
-	void AddCentralImpulse(FVector Impulse);
+	void AddForce(const FVector& Force, const FVector& Offset);
+	void AddTorque(const FVector& Torque);
+	void AddImpulse(const FVector& Impulse, const FVector& Offset);
+	void AddCentralForce(const FVector& Force);
+	void AddCentralImpulse(const FVector& Impulse);
+
+	FTransform GetCenterOfMassTransform() const;
 	FVector GetLinearVelocity() const;
 	FVector GetAngularVelocity() const;
-	FVector GetVelocityAtOffset(FVector Offset) const;
+	FVector GetVelocityAtOffset(const FVector& Offset) const;
+
+	void SetCenterOfMassTransform(const FTransform& Transform) const;
+	void SetLinearVelocity(const FVector& Velocity) const;
+	void SetAngularVelocity(const FVector& Velocity) const;
 
 	virtual void TickPhysics(float DeltaTime)
+	{
+	}
+
+	virtual void PostPhysicsFrame()
 	{
 	}
 

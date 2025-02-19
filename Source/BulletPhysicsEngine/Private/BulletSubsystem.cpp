@@ -16,6 +16,8 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	Super::Initialize(Collection);
 	PhysicsDeltaTime = 1/PhysicsRefreshRate;
 
+	TickCount = 0;
+
 	BtCollisionConfig = new btDefaultCollisionConfiguration();
 	BtCollisionDispatcher = new btCollisionDispatcher(BtCollisionConfig);
 
@@ -29,8 +31,10 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	BtWorld->setGravity(btVector3(Gravity.X,Gravity.Y, Gravity.Z));
 	BtWorld->setInternalTickCallback([](btDynamicsWorld *BtWorld, btScalar TimeStep)
 	{
-		OnPhysicsTickDelegate.Broadcast(TimeStep);
-	}, nullptr, true);
+		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
+		BulletSubsystem->OnPhysicsTickDelegate.Broadcast(TimeStep);
+		BulletSubsystem->TickCount++;
+	}, this, true);
 
 	UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: Bullet world init"));
 
@@ -97,12 +101,41 @@ void UBulletSubsystem::EnableDebugDrawer()
 
 void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 {
+	const int32 PreviousTickCount = GetTickCount();
+
+	if (IsRollback())
+	{
+		TickCount = RollbackStartTick;
+
+		while (GetTickCount() < PreviousTickCount)
+		{
+			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
+		}
+
+		bIsRollback = false;
+	}
+
+	if (bIsSkipping)
+	{
+		while (GetTickCount() < TickToSkipTo)
+		{
+			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
+		}
+
+		bIsSkipping = false;
+	}
+
 	float TimeAccumulated = DeltaSeconds;
 
 	while (TimeAccumulated > 0.f)
 	{
 		BtWorld->stepSimulation(FMath::Min(TimeAccumulated, FixedTimeStep), 1, FixedTimeStep);
 		TimeAccumulated -= FixedTimeStep;
+	}
+
+	if (GetTickCount() != PreviousTickCount)
+	{
+		OnPostPhysicsFrameDelegate.Broadcast();
 	}
 
 #if WITH_EDITOR

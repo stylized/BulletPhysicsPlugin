@@ -25,9 +25,17 @@ class BulletHelpers
 			// For clarity; this is for box sizes so no offset
 			return ToBtDir(Sv);
 		}
+		static FVector ToUEPos(const btVector3& V)
+		{
+			return FVector(V.x(), V.y(), V.z()) * BULLET_TO_WORLD_SCALE;
+		}
 		static FVector ToUEPos(const btVector3& V, const FVector& WorldOrigin)
 		{
-			return FVector(V.x(), V.y(), V.z()) * BULLET_TO_WORLD_SCALE + WorldOrigin;
+			return ToUEPos(V) + WorldOrigin;
+		}
+		static btVector3 ToBtPos(const FVector& V)
+		{
+			return btVector3(V.X, V.Y, V.Z) * WORLD_TO_BULLET_SCALE;
 		}
 		static btVector3 ToBtPos(const FVector& V, const FVector& WorldOrigin)
 		{
@@ -63,12 +71,23 @@ class BulletHelpers
 		{
 			return FLinearColor(C.x(), C.y(), C.z()).ToFColor(true);
 		}
-
+		static FTransform ToUE(const btTransform& T)
+		{
+			const FQuat Rot = ToUE(T.getRotation());
+			const FVector Pos = ToUEPos(T.getOrigin());
+			return FTransform(Rot, Pos);
+		}
 		static FTransform ToUE(const btTransform& T, const FVector& WorldOrigin)
 		{
 			const FQuat Rot = ToUE(T.getRotation());
 			const FVector Pos = ToUEPos(T.getOrigin(), WorldOrigin);
 			return FTransform(Rot, Pos);
+		}
+		static btTransform ToBt(const FTransform& T)
+		{
+			return btTransform(
+					ToBt(T.GetRotation()),
+					ToBtPos(T.GetLocation()));
 		}
 		static btTransform ToBt(const FTransform& T, const FVector& WorldOrigin)
 		{

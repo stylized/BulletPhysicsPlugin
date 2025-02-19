@@ -16,9 +16,9 @@
 
 #include "BulletSubsystem.generated.h"
 
-
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
+DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
 
 class UBulletPhysicsComponent;
 
@@ -68,7 +68,10 @@ UCLASS()
 	GENERATED_BODY()
 
 	public:
-		static inline FOnPhysicsTick OnPhysicsTickDelegate;
+		/// Called before each Bullet physics tick, used to add forces
+		FOnPhysicsTick OnPhysicsTickDelegate;
+		/// Called after Bullet simulation has run for a frame (one or more ticks)
+		FOnPostPhysicsFrame OnPostPhysicsFrameDelegate;
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void AddStaticBody(AActor* Body, float Friction, float Restitution,int &ID);
@@ -131,6 +134,22 @@ UCLASS()
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Settings")
 			void EnableDebugDrawer();
+
+		int32 GetTickCount() { return TickCount; }
+
+		bool IsRollback() { return bIsRollback; }
+
+		void StartRollback(int32 RollbackTick)
+		{
+			bIsRollback = true;
+			RollbackStartTick = RollbackTick;
+		}
+
+		void SkipToTick(int32 SkipTick)
+		{
+			bIsSkipping = true;
+			TickToSkipTo = SkipTick;
+		}
 
 		void RayTestSingle(FVector Start, FVector End, int CheckObjectID, std::function<void(const FVector&, const FVector&, const bool&)> HitCallback);
 
@@ -201,6 +220,16 @@ private:
 		TArray<CachedDynamicShapeData> CachedDynamicShapes;
 
 		TArray<btRigidBody*> BtRigidBodies;
+
+		int32 TickCount;
+
+		int32 RollbackStartTick;
+
+		bool bIsRollback;
+
+		int32 TickToSkipTo;
+
+		bool bIsSkipping;
 
 	public:
 		btDiscreteDynamicsWorld* GetBulletWorld() const {return BtWorld;};
