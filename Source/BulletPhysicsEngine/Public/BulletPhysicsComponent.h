@@ -22,6 +22,9 @@ public:
 	FVector GetLinearVelocity() const;
 	FVector GetAngularVelocity() const;
 	FVector GetVelocityAtOffset(const FVector& Offset) const;
+	FVector GetLocation() const;
+	FQuat GetQuaternion() const;
+	FRotator GetRotation() const;
 
 	void SetCenterOfMassTransform(const FTransform& Transform) const;
 	void SetLinearVelocity(const FVector& Velocity) const;

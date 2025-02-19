@@ -61,6 +61,21 @@ FVector UBulletPhysicsComponent::GetVelocityAtOffset(const FVector& Offset) cons
 	return BulletHelpers::ToUEDir(RigidBody->getVelocityInLocalPoint(BulletHelpers::ToBtPos(Offset)));
 }
 
+FVector UBulletPhysicsComponent::GetLocation() const
+{
+	return BulletHelpers::ToUEPos(RigidBody->getCenterOfMassPosition());
+}
+
+FQuat UBulletPhysicsComponent::GetQuaternion() const
+{
+	return BulletHelpers::ToUE(RigidBody->getOrientation());
+}
+
+FRotator UBulletPhysicsComponent::GetRotation() const
+{
+	return GetQuaternion().Rotator();
+}
+
 void UBulletPhysicsComponent::SetCenterOfMassTransform(const FTransform& Transform) const
 {
 	RigidBody->setCenterOfMassTransform(BulletHelpers::ToBt(Transform));
