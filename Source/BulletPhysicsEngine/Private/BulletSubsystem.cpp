@@ -101,19 +101,21 @@ void UBulletSubsystem::EnableDebugDrawer()
 
 void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 {
-	const int32 PreviousTickCount = GetTickCount();
+	const int32 PreRollbackTickCount = GetTickCount();
 
 	if (IsRollback())
 	{
 		TickCount = RollbackStartTick;
 
-		while (GetTickCount() < PreviousTickCount)
+		while (GetTickCount() < PreRollbackTickCount)
 		{
 			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
 		}
 
 		bIsRollback = false;
 	}
+
+	const int32 PreUpdateTickCount = GetTickCount();
 
 	if (bIsSkipping)
 	{
@@ -133,7 +135,7 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 		TimeAccumulated -= FixedTimeStep;
 	}
 
-	if (GetTickCount() != PreviousTickCount)
+	if (GetTickCount() != PreUpdateTickCount)
 	{
 		OnPostPhysicsFrameDelegate.Broadcast();
 	}
