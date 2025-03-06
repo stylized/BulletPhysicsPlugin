@@ -184,24 +184,6 @@ void UNetworkedPhysicsComponent::ClientAckUserCmd_Implementation(int32 CmdTickCo
 	}
 }
 
-void UNetworkedPhysicsComponent::MulticastReceiveSnapshot_Implementation(const FPhysicsSnapshot& Snapshot)
-{
-	if (!HasBegunPlay())
-	{
-		return;
-	}
-
-	BulletSubsystem->StartRollback(Snapshot.TickCount);
-	SetCenterOfMassTransform(Snapshot.Transform);
-	SetLinearVelocity(Snapshot.LinearVelocity);
-	SetAngularVelocity(Snapshot.AngularVelocity);
-
-	if (GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
-	{
-		LatestUserCmd = Snapshot.LatestUserCmd;
-	}
-}
-
 void UNetworkedPhysicsComponent::ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits)
 {
 	if (!HasBegunPlay())

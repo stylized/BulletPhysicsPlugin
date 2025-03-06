@@ -53,8 +53,6 @@ public:
 	{
 	}
 
-	virtual void SendSnapshotToClients();
-
 	virtual void SerializeSnapshot(FArchive& Ar);
 	void ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits);
 	void AddToSnapshot(FPhysicsSceneSnapshot& Snapshot);
