@@ -16,8 +16,6 @@ void ABulletGameState::MulticastReceiveSnapshot_Implementation(const FPhysicsSce
 		return;
 	}
 
-	UE_LOG(LogTemp, Display, TEXT("MulticastReceiveSnapshot netmode %d"), GetWorld()->GetNetMode());
-
 	for (const FPhysicsObjectSnapshotPackedBits& ObjectSnapshot : Snapshot.Objects)
 	{
 		if (ObjectSnapshot.Object != nullptr)

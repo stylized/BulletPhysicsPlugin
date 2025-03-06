@@ -87,12 +87,8 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 	Ar << AngularVelocity;
 	Ar << UserCmd;
 
-	UE_LOG(LogNetworkedPhysics, Display, TEXT("Serializing snapshot (%s) role %d"), *GetNameSafe(GetOwner()), GetOwner()->GetLocalRole());
-
 	if (Ar.IsLoading())
 	{
-		UE_LOG(LogNetworkedPhysics, Display, TEXT("Applying snapshot (%s) role %d"), *GetNameSafe(GetOwner()), GetOwner()->GetLocalRole());
-
 		SetCenterOfMassTransform(Transform);
 		SetLinearVelocity(LinearVelocity);
 		SetAngularVelocity(AngularVelocity);
@@ -202,15 +198,12 @@ void UNetworkedPhysicsComponent::MulticastReceiveSnapshot_Implementation(const F
 
 	if (GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
 	{
-		UE_LOG(LogNetworkedPhysics, Display, TEXT("Got snapshot for sim proxy"));
 		LatestUserCmd = Snapshot.LatestUserCmd;
 	}
 }
 
 void UNetworkedPhysicsComponent::ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits)
 {
-	UE_LOG(LogNetworkedPhysics, Display, TEXT("ClientReadSnapshot (%s) role %d"), *GetNameSafe(GetOwner()), GetOwner()->GetLocalRole());
-
 	if (!HasBegunPlay())
 	{
 		return;
