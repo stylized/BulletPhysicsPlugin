@@ -14,7 +14,7 @@ class BULLETPHYSICSENGINE_API ABulletGameState : public AGameState
 public:
 	virtual void BeginPlay() override;
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastReceiveSnapshot(const FPhysicsSceneSnapshot& Snapshot);
 
 protected:
