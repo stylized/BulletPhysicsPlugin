@@ -67,13 +67,6 @@ void UNetworkedPhysicsComponent::PostPhysicsFrame()
 	}
 }
 
-void UNetworkedPhysicsComponent::SendSnapshotToClients()
-{
-	FPhysicsSnapshot Snapshot;
-	InitializeSnapshot(Snapshot);
-	MulticastReceiveSnapshot(Snapshot);
-}
-
 void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 {
 	FTransform Transform;
