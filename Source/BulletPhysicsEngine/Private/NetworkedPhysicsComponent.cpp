@@ -111,53 +111,6 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 	}
 }
 
-void UNetworkedPhysicsComponent::ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits)
-{
-	UE_LOG(LogNetworkedPhysics, Display, TEXT("ClientReadSnapshot (%s) role %d"), *GetNameSafe(GetOwner()), GetOwner()->GetLocalRole());
-
-	if (!HasBegunPlay())
-	{
-		return;
-	}
-
-	const int32 NumBits = PackedBits.DataBits.Num();
-	if (NumBits > NetworkedPhysicsCVars::NetPackedSnapshotMaxBits)
-	{
-		// Protect against bad data that could cause client to allocate way too much memory.
-		UE_LOG(LogNetworkedPhysics, Error, TEXT("ClientReadSnapshot (%s): Dropping snapshot due to NumBits (%d) exceeding allowable limit (%d). See NetPackedSnapshotMaxBits."), *GetNameSafe(GetOwner()), NumBits, NetworkedPhysicsCVars::NetPackedSnapshotMaxBits);
-		return;
-	}
-
-	// Reuse bit reader to avoid allocating memory each time
-	SnapshotBitReader.SetData((uint8*)PackedBits.DataBits.GetData(), NumBits);
-
-	// Deserialize bits and apply snapshot
-	SerializeSnapshot(SnapshotBitReader);
-}
-
-void UNetworkedPhysicsComponent::AddToSnapshot(FPhysicsSceneSnapshot& Snapshot)
-{
-	// Reset bit writer without affecting allocations
-	FBitWriterMark BitWriterReset;
-	BitWriterReset.Pop(SnapshotBitWriter);
-
-	// 'static' to avoid reallocation each invocation
-	static FPhysicsObjectSnapshotPackedBits PackedBits;
-
-	PackedBits.Object = this;
-
-	SerializeSnapshot(SnapshotBitWriter);
-
-	// Copy bits to our struct that we can NetSerialize to the clients
-	PackedBits.DataBits.SetNumUninitialized(SnapshotBitWriter.GetNumBits());
-
-	check(PackedBits.DataBits.Num() >= SnapshotBitWriter.GetNumBits());
-	FMemory::Memcpy(PackedBits.DataBits.GetData(), SnapshotBitWriter.GetData(), SnapshotBitWriter.GetNumBytes());
-
-	// Add it to the full scene snapshot
-	Snapshot.Objects.Add(PackedBits);
-}
-
 void UNetworkedPhysicsComponent::InitializeSnapshot(FPhysicsSnapshot& Snapshot)
 {
 	Snapshot.TickCount = BulletSubsystem->GetTickCount();
@@ -268,4 +221,79 @@ void UNetworkedPhysicsComponent::MulticastReceiveSnapshot_Implementation(const F
 		UE_LOG(LogNetworkedPhysics, Display, TEXT("Got snapshot for sim proxy"));
 		LatestUserCmd = Snapshot.LatestUserCmd;
 	}
+}
+
+void UNetworkedPhysicsComponent::ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits)
+{
+	UE_LOG(LogNetworkedPhysics, Display, TEXT("ClientReadSnapshot (%s) role %d"), *GetNameSafe(GetOwner()), GetOwner()->GetLocalRole());
+
+	if (!HasBegunPlay())
+	{
+		return;
+	}
+
+	const int32 NumBits = PackedBits.DataBits.Num();
+	if (NumBits > NetworkedPhysicsCVars::NetPackedSnapshotMaxBits)
+	{
+		// Protect against bad data that could cause client to allocate way too much memory.
+		UE_LOG(LogNetworkedPhysics, Error, TEXT("ClientReadSnapshot (%s): Dropping snapshot due to NumBits (%d) exceeding allowable limit (%d). See NetPackedSnapshotMaxBits."), *GetNameSafe(GetOwner()), NumBits, NetworkedPhysicsCVars::NetPackedSnapshotMaxBits);
+		return;
+	}
+
+	// Reuse bit reader to avoid allocating memory each time
+	SnapshotBitReader.SetData((uint8*)PackedBits.DataBits.GetData(), NumBits);
+
+	// Deserialize bits and apply snapshot
+	SerializeSnapshot(SnapshotBitReader);
+}
+
+void UNetworkedPhysicsComponent::AddToSnapshot(FPhysicsSceneSnapshot& Snapshot)
+{
+	// Reset bit writer without affecting allocations
+	FBitWriterMark BitWriterReset;
+	BitWriterReset.Pop(SnapshotBitWriter);
+
+	// 'static' to avoid reallocation each invocation
+	static FPhysicsObjectSnapshotPackedBits PackedBits;
+
+	PackedBits.Object = this;
+
+	SerializeSnapshot(SnapshotBitWriter);
+
+	// Copy bits to our struct that we can NetSerialize to the clients
+	PackedBits.DataBits.SetNumUninitialized(SnapshotBitWriter.GetNumBits());
+
+	check(PackedBits.DataBits.Num() >= SnapshotBitWriter.GetNumBits());
+	FMemory::Memcpy(PackedBits.DataBits.GetData(), SnapshotBitWriter.GetData(), SnapshotBitWriter.GetNumBytes());
+
+	// Add it to the full scene snapshot
+	Snapshot.Objects.Add(PackedBits);
+}
+
+bool FPhysicsObjectSnapshotPackedBits::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
+{
+	// Physics object net ID
+	Ar << Object;
+
+	// Array size in bits, using minimal number of bytes to write it out.
+	uint32 NumBits = DataBits.Num();
+	Ar.SerializeIntPacked(NumBits);
+
+	if (NumBits > static_cast<uint32>(NetworkedPhysicsCVars::NetPackedSnapshotMaxBits))
+	{
+		// Protect against bad data that could cause clients to allocate way too much memory.
+		UE_LOG(LogNetworkedPhysics, Error, TEXT("FPhysicsObjectSnapshotPackedBits::NetSerialize: Dropping snapshot due to NumBits (%d) exceeding allowable limit (%d). See NetPackedSnapshotMaxBits."), NumBits, NetworkedPhysicsCVars::NetPackedSnapshotMaxBits);
+		return false;
+	}
+
+	if (Ar.IsLoading())
+	{
+		DataBits.Init(0, NumBits);
+	}
+
+	// Array data
+	Ar.SerializeBits(DataBits.GetData(), NumBits);
+
+	bOutSuccess = true;
+	return !Ar.IsError();
 }
