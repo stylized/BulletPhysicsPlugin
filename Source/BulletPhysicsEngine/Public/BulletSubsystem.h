@@ -8,6 +8,7 @@
 #include "BulletPhysicsEngine/motionstate.h"
 #include "BulletPhysicsEngine/BulletMain.h"
 #include "BulletPhysicsEngine/btdebug.h"
+#include "NetSnapshot.h"
 #include "Components/ShapeComponent.h"
 #include <functional>
 #include "GameFramework/Actor.h"
@@ -16,11 +17,12 @@
 
 #include "BulletSubsystem.generated.h"
 
+class ABulletGameState;
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
-
-class UBulletPhysicsComponent;
+DECLARE_MULTICAST_DELEGATE_OneParam(FAddToSnapshot, FPhysicsSceneSnapshot&);
 
 struct FClosestRayResultWithExclude : btCollisionWorld::ClosestRayResultCallback
 {
@@ -72,6 +74,8 @@ UCLASS()
 		FOnPhysicsTick OnPhysicsTickDelegate;
 		/// Called after Bullet simulation has run for a frame (one or more ticks)
 		FOnPostPhysicsFrame OnPostPhysicsFrameDelegate;
+		/// Used for objects to add themself to the physics scene snapshots sent from the server
+		FAddToSnapshot AddToSnapshotDelegate;
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void AddStaticBody(AActor* Body, float Friction, float Restitution,int &ID);
@@ -96,6 +100,8 @@ UCLASS()
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void StepPhysics(float DeltaSeconds, float FixedTimeStep = 0.0078125f);
+
+		void ServerBroadcastSnapshot();
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void SetPhysicsState(int ID, FTransform transforms, FVector Velocity, FVector AngularVelocity,FVector& Force);
@@ -281,4 +287,5 @@ private:
 
 		const UBulletSubsystem::CachedDynamicShapeData& GetCachedDynamicShapeData(AActor* Actor, float Mass);
 
+		ABulletGameState* GameState;
 };

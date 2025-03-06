@@ -2,6 +2,9 @@
 
 
 #include "BulletSubsystem.h"
+#include "BulletGameState.h"
+#include "Engine/EngineBaseTypes.h"
+#include "NetworkedPhysicsComponent.h"
 
 #include "EngineUtils.h"
 #include "PhysicsEngine/PhysicsAsset.h"
@@ -55,9 +58,8 @@ void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	FName bulletStaticTag = FName("B_STATIC");
 	FName bulletDynamicTag = FName("B_DYNAMIC");
 
-
-
 	Super::OnWorldBeginPlay(InWorld);
+
 	for (TActorIterator<AActor> actorItr(&InWorld); actorItr; ++actorItr)
 	{
 		AActor* actor = *actorItr;
@@ -76,6 +78,12 @@ void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		}
 	}
 
+	GameState = InWorld.GetGameState<ABulletGameState>();
+
+	if (GameState == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UBulletSubsystem::OnWorldBeginPlay: Game state is not an ABulletGameState, networking won't work"));
+	}
 }
 
 void UBulletSubsystem::Tick(float deltaTime)
@@ -138,6 +146,12 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 	if (GetTickCount() != PreUpdateTickCount)
 	{
 		OnPostPhysicsFrameDelegate.Broadcast();
+
+		if (GetWorld()->GetNetMode() < NM_Client)
+		{
+			// Send a snapshot of the updated world to clients
+			ServerBroadcastSnapshot();
+		}
 	}
 
 #if WITH_EDITOR
@@ -145,6 +159,18 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 		BtWorld->debugDrawWorld();
 	}
 #endif
+}
+
+void UBulletSubsystem::ServerBroadcastSnapshot()
+{
+	if (GameState == nullptr)
+	{
+		return;
+	}
+
+	FPhysicsSceneSnapshot Snapshot { .TickCount = GetTickCount() };
+	AddToSnapshotDelegate.Broadcast(Snapshot);
+	GameState->MulticastReceiveSnapshot(Snapshot);
 }
 
 void UBulletSubsystem::SetupStaticGeometryPhysics(TArray<AActor*> Actors, float Friction, float Restitution)
