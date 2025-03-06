@@ -111,15 +111,6 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 	}
 }
 
-void UNetworkedPhysicsComponent::InitializeSnapshot(FPhysicsSnapshot& Snapshot)
-{
-	Snapshot.TickCount = BulletSubsystem->GetTickCount();
-	Snapshot.Transform = GetCenterOfMassTransform();
-	Snapshot.LinearVelocity = GetLinearVelocity();
-	Snapshot.AngularVelocity = GetAngularVelocity();
-	Snapshot.LatestUserCmd = LatestUserCmd;
-}
-
 void UNetworkedPhysicsComponent::FinalizeLatestUserCmd()
 {
 	const uint32 TickCount = BulletSubsystem->GetTickCount();

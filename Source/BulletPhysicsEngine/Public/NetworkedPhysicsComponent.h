@@ -29,24 +29,6 @@ struct FUserCmd
 	bool Handbrake = false;
 };
 
-USTRUCT()
-struct FPhysicsSnapshot
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	int32 TickCount;
-	UPROPERTY()
-	FTransform Transform;
-	UPROPERTY()
-	FVector LinearVelocity;
-	UPROPERTY()
-	FVector AngularVelocity;
-	UPROPERTY()
-	/// TODO: don't send this to owning client
-	FUserCmd LatestUserCmd;
-};
-
 UCLASS()
 class BULLETPHYSICSENGINE_API UNetworkedPhysicsComponent : public UBulletPhysicsComponent
 {
@@ -76,8 +58,6 @@ public:
 	virtual void SerializeSnapshot(FArchive& Ar);
 	void ClientReadSnapshot(const FPhysicsObjectSnapshotPackedBits& PackedBits);
 	void AddToSnapshot(FPhysicsSceneSnapshot& Snapshot);
-
-	void InitializeSnapshot(FPhysicsSnapshot& Snapshot);
 
 	void FinalizeLatestUserCmd();
 
