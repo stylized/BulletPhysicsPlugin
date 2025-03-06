@@ -80,9 +80,6 @@ public:
 	UFUNCTION(unreliable, client)
 	void ClientAckUserCmd(int32 CmdTickCount, int32 ServerTickCount);
 
-	UFUNCTION(unreliable, netmulticast)
-	void MulticastReceiveSnapshot(const FPhysicsSnapshot& Snapshot);
-
 private:
 	FUserCmd LatestUserCmd;
 	FUserCmd UserCmdBuffer[UserCmdBufferSize];
