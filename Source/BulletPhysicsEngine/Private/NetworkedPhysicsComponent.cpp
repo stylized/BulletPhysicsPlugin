@@ -126,6 +126,12 @@ void UNetworkedPhysicsComponent::SendUnacknowledgedUserCmds()
 
 const FUserCmd& UNetworkedPhysicsComponent::GetUserCmd(int32 TickCount)
 {
+	if (GetWorld()->GetNetMode() == NM_Standalone)
+	{
+		// No usercmd networking
+		return LatestUserCmd;
+	}
+
 	const FUserCmd& UserCmd = UserCmdBuffer[TickCount % UserCmdBufferSize];
 
 	if (UserCmd.TickCount == TickCount)
