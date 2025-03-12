@@ -29,7 +29,7 @@ struct FUserCmd
 	bool Handbrake = false;
 };
 
-UCLASS()
+UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class BULLETPHYSICSENGINE_API UNetworkedPhysicsComponent : public UBulletPhysicsComponent
 {
 	GENERATED_BODY()

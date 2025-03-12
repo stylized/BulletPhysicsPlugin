@@ -14,6 +14,11 @@ void UBulletPhysicsComponent::BeginPlay()
 	RigidBody->setSpinningFriction(SpinningFriction);
 	RigidBody->setRestitution(Restitution);
 	RigidBody->setContactStiffnessAndDamping(ContactStiffness, ContactDamping);
+
+	if (bIsKinematic)
+	{
+		RigidBody->setCollisionFlags(RigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+	}
 }
 
 void UBulletPhysicsComponent::AddForce(const FVector& Force, const FVector& Offset)
@@ -43,7 +48,14 @@ void UBulletPhysicsComponent::AddCentralImpulse(const FVector& Impulse)
 
 FTransform UBulletPhysicsComponent::GetCenterOfMassTransform() const
 {
-	return BulletHelpers::ToUE(RigidBody->getCenterOfMassTransform());
+	if (bIsKinematic)
+	{
+		return GetOwner()->GetActorTransform();
+	}
+	else
+	{
+		return BulletHelpers::ToUE(RigidBody->getCenterOfMassTransform());
+	}
 }
 
 FVector UBulletPhysicsComponent::GetLinearVelocity() const
@@ -76,17 +88,24 @@ FRotator UBulletPhysicsComponent::GetRotation() const
 	return GetQuaternion().Rotator();
 }
 
-void UBulletPhysicsComponent::SetCenterOfMassTransform(const FTransform& Transform) const
+void UBulletPhysicsComponent::SetCenterOfMassTransform(const FTransform& Transform)
 {
-	RigidBody->setCenterOfMassTransform(BulletHelpers::ToBt(Transform));
+	if (bIsKinematic)
+	{
+		GetOwner()->SetActorTransform(Transform);
+	}
+	else
+	{
+		RigidBody->setCenterOfMassTransform(BulletHelpers::ToBt(Transform));
+	}
 }
 
-void UBulletPhysicsComponent::SetLinearVelocity(const FVector& Velocity) const
+void UBulletPhysicsComponent::SetLinearVelocity(const FVector& Velocity)
 {
 	RigidBody->setLinearVelocity(BulletHelpers::ToBtDir(Velocity));
 }
 
-void UBulletPhysicsComponent::SetAngularVelocity(const FVector& Velocity) const
+void UBulletPhysicsComponent::SetAngularVelocity(const FVector& Velocity)
 {
 	RigidBody->setAngularVelocity(BulletHelpers::ToBtDir(Velocity));
 }

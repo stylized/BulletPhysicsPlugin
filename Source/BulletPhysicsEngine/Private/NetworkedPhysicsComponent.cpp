@@ -41,6 +41,8 @@ void UNetworkedPhysicsComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
 void UNetworkedPhysicsComponent::TickPhysics(float DeltaTime)
 {
+	Super::TickPhysics(DeltaTime);
+
 	const ENetRole Role = GetOwner()->GetLocalRole();
 
 	if (Role == ROLE_AutonomousProxy && !BulletSubsystem->IsRollback())
