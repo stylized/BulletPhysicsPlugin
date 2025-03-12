@@ -101,6 +101,8 @@ UCLASS()
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void StepPhysics(float DeltaSeconds, float FixedTimeStep = 0.0078125f);
 
+		void NotifyCollisions();
+
 		void ServerBroadcastSnapshot();
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")

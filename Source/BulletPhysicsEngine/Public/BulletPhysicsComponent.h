@@ -12,6 +12,11 @@ class BULLETPHYSICSENGINE_API UBulletPhysicsComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	static UBulletPhysicsComponent* GetFromBulletObject(const btCollisionObject* Object)
+	{
+		return reinterpret_cast<UBulletPhysicsComponent*>(Object->getUserPointer());
+	}
+
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
@@ -53,6 +58,10 @@ public:
 	}
 
 	virtual void PostPhysicsFrame()
+	{
+	}
+
+	virtual void OnNotifyCollision(const btManifoldPoint& Point)
 	{
 	}
 

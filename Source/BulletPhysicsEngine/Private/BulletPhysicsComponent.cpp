@@ -9,6 +9,7 @@ void UBulletPhysicsComponent::BeginPlay()
 	BulletSubsystem->OnPostPhysicsFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostPhysicsFrame);
 
 	RigidBody = BulletSubsystem->AddRigidBody(GetOwner(), Friction, Restitution, Mass);
+	RigidBody->setUserPointer(this);
 	RigidBody->setFriction(Friction);
 	RigidBody->setRollingFriction(RollingFriction);
 	RigidBody->setSpinningFriction(SpinningFriction);

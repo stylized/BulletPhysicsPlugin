@@ -3,6 +3,7 @@
 
 #include "BulletSubsystem.h"
 #include "BulletGameState.h"
+#include "BulletPhysicsComponent.h"
 #include "Engine/EngineBaseTypes.h"
 #include "NetworkedPhysicsComponent.h"
 
@@ -32,12 +33,21 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	BtConstraintSolver = mt;
 	BtWorld = new btDiscreteDynamicsWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
 	BtWorld->setGravity(btVector3(Gravity.X,Gravity.Y, Gravity.Z));
+
+	// Pre-tick callback
 	BtWorld->setInternalTickCallback([](btDynamicsWorld *BtWorld, btScalar TimeStep)
 	{
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
 		BulletSubsystem->OnPhysicsTickDelegate.Broadcast(TimeStep);
-		BulletSubsystem->TickCount++;
 	}, this, true);
+
+	// Post-tick callback
+	BtWorld->setInternalTickCallback([](btDynamicsWorld *BtWorld, btScalar TimeStep)
+	{
+		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
+		BulletSubsystem->NotifyCollisions();
+		BulletSubsystem->TickCount++;
+	}, this, false);
 
 	UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: Bullet world init"));
 
@@ -159,6 +169,38 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 		BtWorld->debugDrawWorld();
 	}
 #endif
+}
+
+void UBulletSubsystem::NotifyCollisions()
+{
+	const int ManifoldCount = BtWorld->getDispatcher()->getNumManifolds();
+
+	for (int ManifoldIndex = 0; ManifoldIndex < ManifoldCount; ManifoldIndex++)
+	{
+		btPersistentManifold* Manifold = BtWorld->getDispatcher()->getManifoldByIndexInternal(ManifoldIndex);
+		const int ContactCount = Manifold->getNumContacts();
+
+		for (int ContactIndex = 0; ContactIndex < ContactCount; ContactIndex++)
+		{
+			const btManifoldPoint& Point = Manifold->getContactPoint(ContactIndex);
+
+			if (Point.getDistance() < 0.f)
+			{
+				UBulletPhysicsComponent* ComponentA = UBulletPhysicsComponent::GetFromBulletObject(Manifold->getBody0());
+				UBulletPhysicsComponent* ComponentB = UBulletPhysicsComponent::GetFromBulletObject(Manifold->getBody1());
+
+				if (ComponentA != nullptr)
+				{
+					ComponentA->OnNotifyCollision(Point);
+				}
+
+				if (ComponentB != nullptr)
+				{
+					ComponentB->OnNotifyCollision(Point);
+				}
+			}
+		}
+	}
 }
 
 void UBulletSubsystem::ServerBroadcastSnapshot()
