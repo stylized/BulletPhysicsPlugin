@@ -49,7 +49,8 @@ class BULLETPHYSICSENGINE_API BulletCustomMotionState : public btMotionState
 			if (Parent.IsValid(false))
 			{
 				btTransform GraphicTrans = CenterOfMassWorldTrans * CenterOfMassTransform;
-				Parent->SetActorTransform(BulletHelpers::ToUE(GraphicTrans, WorldOrigin));
+				FVector Scale = Parent->GetActorScale3D();
+				Parent->SetActorTransform(BulletHelpers::ToUE(GraphicTrans, WorldOrigin).GetScaled(Scale));
 			}
 		}
 };
@@ -97,7 +98,8 @@ class BULLETPHYSICSENGINE_API BulletUEMotionState: public btMotionState
 			if (Parent.IsValid(false))
 			{
 				btTransform GraphicTrans = CenterOfMassWorldTrans * CenterOfMassTransform;
-				Parent->SetWorldTransform(LocalTransform.Inverse()* BulletHelpers::ToUE(GraphicTrans, WorldOrigin));
+				FVector Scale = Parent->GetRelativeScale3D();
+				Parent->SetWorldTransform(LocalTransform.Inverse() * BulletHelpers::ToUE(GraphicTrans, WorldOrigin).GetScaled(Scale));
 			}
 		}
 };
