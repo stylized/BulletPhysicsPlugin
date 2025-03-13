@@ -143,9 +143,14 @@ UCLASS()
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Settings")
 			void EnableDebugDrawer();
 
-		int32 GetTickCount() { return TickCount; }
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		int32 GetTickCount() const { return TickCount; }
 
-		bool IsRollback() { return bIsRollback; }
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		float GetTimeSeconds() const { return TickCount * PhysicsDeltaTime; }
+
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Networking")
+		bool IsRollback() const { return bIsRollback; }
 
 		void StartRollback(int32 RollbackTick)
 		{
