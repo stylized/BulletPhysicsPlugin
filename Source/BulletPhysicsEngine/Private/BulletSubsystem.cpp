@@ -99,7 +99,7 @@ void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 void UBulletSubsystem::Tick(float deltaTime)
 {
 	Super::Tick(deltaTime);
-	StepPhysics(deltaTime);
+	StepPhysics(deltaTime, PhysicsDeltaTime);
 }
 
 TStatId UBulletSubsystem::GetStatId() const
