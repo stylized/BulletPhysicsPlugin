@@ -1,4 +1,5 @@
 #include "NetworkedPhysicsComponent.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Engine/EngineTypes.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogNetworkedPhysics, Log, All);
@@ -156,9 +157,19 @@ void UNetworkedPhysicsComponent::SetInputSide(float Side)
 	LatestUserCmd.Steering = Side;
 }
 
-void UNetworkedPhysicsComponent::SetInputHandbrake(bool Handbrake)
+void UNetworkedPhysicsComponent::SetInputHandbrake(bool bHandbrake)
 {
-	LatestUserCmd.Handbrake = Handbrake;
+	LatestUserCmd.bHandbrake = bHandbrake;
+}
+
+void UNetworkedPhysicsComponent::SetInputDashLeft(bool bDashLeft)
+{
+	LatestUserCmd.bDashLeft = bDashLeft;
+}
+
+void UNetworkedPhysicsComponent::SetInputDashRight(bool bDashRight)
+{
+	LatestUserCmd.bDashRight = bDashRight;
 }
 
 void UNetworkedPhysicsComponent::ServerReceiveSingleUserCmd(const FUserCmd &UserCmd)

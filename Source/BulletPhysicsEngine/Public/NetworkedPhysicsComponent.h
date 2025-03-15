@@ -15,7 +15,9 @@ struct FUserCmd
 		Ar << UserCmd.TickCount;
 		Ar << UserCmd.Throttle;
 		Ar << UserCmd.Steering;
-		Ar.SerializeBits(&UserCmd.Handbrake, 1);
+		Ar.SerializeBits(&UserCmd.bHandbrake, 1);
+		Ar.SerializeBits(&UserCmd.bDashLeft, 1);
+		Ar.SerializeBits(&UserCmd.bDashRight, 1);
 		return Ar;
 	}
 
@@ -26,7 +28,11 @@ struct FUserCmd
 	UPROPERTY()
 	float Steering = 0.f;
 	UPROPERTY()
-	bool Handbrake = false;
+	bool bHandbrake = false;
+	UPROPERTY()
+	bool bDashLeft = false;
+	UPROPERTY()
+	bool bDashRight = false;
 };
 
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
@@ -68,7 +74,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetInputSide(float Side);
 	UFUNCTION(BlueprintCallable)
-	void SetInputHandbrake(bool Handbrake);
+	void SetInputHandbrake(bool bHandbrake);
+	UFUNCTION(BlueprintCallable)
+	void SetInputDashLeft(bool bDashLeft);
+	UFUNCTION(BlueprintCallable)
+	void SetInputDashRight(bool bDashRight);
 
 	void ServerReceiveSingleUserCmd(const FUserCmd &UserCmd);
 
@@ -80,6 +90,7 @@ public:
 
 private:
 	FUserCmd LatestUserCmd;
+
 	FUserCmd UserCmdBuffer[UserCmdBufferSize];
 
 	/// Tick of latest ack sent to server on client, or latest ack sent to client on server
