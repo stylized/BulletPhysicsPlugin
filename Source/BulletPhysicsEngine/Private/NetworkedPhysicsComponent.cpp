@@ -1,6 +1,7 @@
 #include "NetworkedPhysicsComponent.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/EngineTypes.h"
+#include "Engine/NetConnection.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogNetworkedPhysics, Log, All);
 
@@ -236,6 +237,21 @@ void UNetworkedPhysicsComponent::AddToSnapshot(FPhysicsSceneSnapshot& Snapshot)
 
 	PackedBits.Object = this;
 
+	// Extract the net package map used for serializing object references.
+	UNetConnection* NetConnection = GetOwner()->GetNetConnection();
+	SnapshotBitWriter.PackageMap = NetConnection ? ToRawPtr(NetConnection->PackageMap) : nullptr;
+
+	if (SnapshotBitWriter.PackageMap == nullptr)
+	{
+		UE_LOG(LogNetworkedPhysics, Error, TEXT("AddToSnapshot: Failed to find a NetConnection/PackageMap for data serialization!"));
+		return;
+	}
+
+	// Reset NetTokensPendingExport as PackedBits is reused
+	PackedBits.NetTokensPendingExport.Reset();
+	UE::Net::FNetTokenExportScope NetTokenExportScope(SnapshotBitWriter, NetConnection->GetDriver()->GetNetTokenStore(), PackedBits.NetTokensPendingExport, "AddToSnapshot");
+
+	// Serialize snapshot into a bit stream
 	SerializeSnapshot(SnapshotBitWriter);
 
 	// Copy bits to our struct that we can NetSerialize to the clients
@@ -250,6 +266,8 @@ void UNetworkedPhysicsComponent::AddToSnapshot(FPhysicsSceneSnapshot& Snapshot)
 
 bool FPhysicsObjectSnapshotPackedBits::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {
+	SavedPackageMap = Map;
+
 	// Physics object net ID
 	Ar << Object;
 
@@ -267,6 +285,15 @@ bool FPhysicsObjectSnapshotPackedBits::NetSerialize(FArchive& Ar, class UPackage
 	if (Ar.IsLoading())
 	{
 		DataBits.Init(0, NumBits);
+	}
+	else if (Ar.IsSaving() && NetTokensPendingExport.Num())
+	{
+		// As we now support exporting NetTokens from shared serialization and FPhysicsObjectSnapshotPackedBits serializes data outside of the normal flow
+		// we explicitly capture exports which we needs to be inject during actual serialization.
+		if (UE::Net::FNetTokenExportContext* ExportContext = UE::Net::FNetTokenExportContext::GetNetTokenExportContext(Ar))
+		{
+			ExportContext->AppendNetTokensPendingExport(NetTokensPendingExport);
+		}
 	}
 
 	// Array data

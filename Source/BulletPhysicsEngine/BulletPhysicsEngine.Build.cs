@@ -23,7 +23,7 @@ public class BulletPhysicsEngine : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 				new string[]
 				{
-				"Core", "CoreUObject", "Engine", "InputCore",
+				"Core", "CoreUObject", "Engine", "InputCore", "NetCore",
 				"BulletPhysicsEngineLibrary",
 				"Projects"
 				// ... add other public dependencies that you statically link with here ...
@@ -33,7 +33,7 @@ public class BulletPhysicsEngine : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 				new string[]
 				{
-				// ... add private dependencies that you statically link with here ...	
+				// ... add private dependencies that you statically link with here ...
 				}
 				);
 
