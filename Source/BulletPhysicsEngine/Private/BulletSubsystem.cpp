@@ -14,6 +14,76 @@
 
 const FVector UE_WORLD_ORIGIN = FVector(0);
 
+int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScalar fixedTimeStep)
+{
+	startProfiling(timeStep);
+
+	int numSimulationSubSteps = 0;
+
+	if (maxSubSteps)
+	{
+		//fixed timestep with interpolation
+		m_fixedTimeStep = fixedTimeStep;
+		m_localTime += timeStep;
+		if (m_localTime >= fixedTimeStep)
+		{
+			numSimulationSubSteps = int(m_localTime / fixedTimeStep);
+			m_localTime -= numSimulationSubSteps * fixedTimeStep;
+		}
+	}
+	else
+	{
+		//variable timestep
+		fixedTimeStep = timeStep;
+		m_localTime = m_latencyMotionStateInterpolation ? 0 : timeStep;
+		m_fixedTimeStep = 0;
+		if (btFuzzyZero(timeStep))
+		{
+			numSimulationSubSteps = 0;
+			maxSubSteps = 0;
+		}
+		else
+		{
+			numSimulationSubSteps = 1;
+			maxSubSteps = 1;
+		}
+	}
+
+	//process some debugging flags
+	if (getDebugDrawer())
+	{
+		btIDebugDraw* debugDrawer = getDebugDrawer();
+		gDisableDeactivation = (debugDrawer->getDebugMode() & btIDebugDraw::DBG_NoDeactivation) != 0;
+	}
+	if (numSimulationSubSteps)
+	{
+		//clamp the number of substeps, to prevent simulation grinding spiralling down to a halt
+		int clampedSimulationSteps = (numSimulationSubSteps > maxSubSteps) ? maxSubSteps : numSimulationSubSteps;
+
+		// let us manually control when this happens
+		//saveKinematicState(fixedTimeStep * clampedSimulationSteps);
+
+		applyGravity();
+
+		for (int i = 0; i < clampedSimulationSteps; i++)
+		{
+			internalSingleStepSimulation(fixedTimeStep);
+			synchronizeMotionStates();
+		}
+	}
+	else
+	{
+		synchronizeMotionStates();
+	}
+
+	clearForces();
+
+#ifndef BT_NO_PROFILE
+	CProfileManager::Increment_Frame_Counter();
+#endif  //BT_NO_PROFILE
+
+	return numSimulationSubSteps;
+}
 
 void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 
@@ -31,13 +101,14 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	mt->setRandSeed(1234);
 
 	BtConstraintSolver = mt;
-	BtWorld = new btDiscreteDynamicsWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
+	BtWorld = new CustomBulletWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
 	BtWorld->setGravity(btVector3(Gravity.X,Gravity.Y, Gravity.Z));
 
 	// Pre-tick callback
 	BtWorld->setInternalTickCallback([](btDynamicsWorld *BtWorld, btScalar TimeStep)
 	{
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
+		BulletSubsystem->TickCount++;
 		BulletSubsystem->OnPhysicsTickDelegate.Broadcast(TimeStep);
 	}, this, true);
 
@@ -46,7 +117,6 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	{
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
 		BulletSubsystem->NotifyCollisions();
-		BulletSubsystem->TickCount++;
 	}, this, false);
 
 	UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: Bullet world init"));
@@ -120,6 +190,8 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 	{
 		TickCount = RollbackStartTick;
 
+		OnRollbackStartDelegate.Broadcast(GetTimeSeconds());
+
 		while (GetTickCount() < PreRollbackTickCount)
 		{
 			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
@@ -158,6 +230,8 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 			ServerBroadcastSnapshot();
 		}
 	}
+
+	OnPostFrameDelegate.Broadcast();
 
 #if WITH_EDITOR
 	if (DebugEnabled) {
@@ -885,7 +959,7 @@ void UBulletSubsystem::ResetSim()
 
 	delete BtWorld;
 
-	BtWorld = new btDiscreteDynamicsWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
+	BtWorld = new CustomBulletWorld(BtCollisionDispatcher, BtBroadphase, BtConstraintSolver, BtCollisionConfig);
 	BtWorld->setGravity(btVector3(Gravity.X,Gravity.Y, Gravity.Z));
 	BtBroadphase->resetPool(BtCollisionDispatcher);
 	BtConstraintSolver->reset();

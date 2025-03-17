@@ -5,6 +5,7 @@
 #include "BulletPhysicsComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTickPhysics, float, DeltaTime);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpdateKinematic, float, CurrentTime);
 
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class BULLETPHYSICSENGINE_API UBulletPhysicsComponent : public UActorComponent
@@ -52,14 +53,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void SetAngularVelocity(const FVector& Velocity);
 
-	virtual void TickPhysics(float DeltaTime)
-	{
-		OnTickPhysics.Broadcast(DeltaTime);
-	}
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void SaveKinematicState(float DeltaTime);
+
+	virtual void TickPhysics(float DeltaTime);
+
+	virtual void OnRollbackStart(float RollbackTime);
+
+	virtual void UpdateKinematic(float CurrentTime);
 
 	virtual void PostPhysicsFrame()
 	{
 	}
+
+	virtual void PostFrame();
 
 	virtual void OnNotifyCollision(const btManifoldPoint& Point)
 	{
@@ -67,6 +74,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnTickPhysics OnTickPhysics;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateKinematic OnUpdateKinematic;
 
 	UPROPERTY(EditAnywhere)
 	float Friction = .5f;

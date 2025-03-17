@@ -7,6 +7,8 @@ void UBulletPhysicsComponent::BeginPlay()
 	BulletSubsystem = GetWorld()->GetSubsystem<UBulletSubsystem>();
 	BulletSubsystem->OnPhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::TickPhysics);
 	BulletSubsystem->OnPostPhysicsFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostPhysicsFrame);
+	BulletSubsystem->OnPostFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostFrame);
+	BulletSubsystem->OnRollbackStartDelegate.AddUObject(this, &UBulletPhysicsComponent::OnRollbackStart);
 
 	RigidBody = BulletSubsystem->AddRigidBody(GetOwner(), Friction, Restitution, Mass);
 	RigidBody->setUserPointer(this);
@@ -109,4 +111,40 @@ void UBulletPhysicsComponent::SetLinearVelocity(const FVector& Velocity)
 void UBulletPhysicsComponent::SetAngularVelocity(const FVector& Velocity)
 {
 	RigidBody->setAngularVelocity(BulletHelpers::ToBtDir(Velocity));
+}
+
+void UBulletPhysicsComponent::SaveKinematicState(float DeltaTime)
+{
+	RigidBody->saveKinematicState(DeltaTime);
+}
+
+void UBulletPhysicsComponent::TickPhysics(float DeltaTime)
+{
+	OnTickPhysics.Broadcast(DeltaTime);
+
+	if (bIsKinematic)
+	{
+		UpdateKinematic(BulletSubsystem->GetTimeSeconds());
+		SaveKinematicState(DeltaTime);
+	}
+}
+
+void UBulletPhysicsComponent::OnRollbackStart(float RollbackTime)
+{
+	if (bIsKinematic)
+	{
+		// Save kinematic transform so we can get the right velocities on the first tick of the rollback
+		UpdateKinematic(RollbackTime);
+		SaveKinematicState(BulletSubsystem->PhysicsDeltaTime);
+	}
+}
+
+void UBulletPhysicsComponent::UpdateKinematic(float CurrentTime)
+{
+	OnUpdateKinematic.Broadcast(CurrentTime);
+}
+
+void UBulletPhysicsComponent::PostFrame()
+{
+	UpdateKinematic(BulletSubsystem->GetInterpolatedTimeSeconds());
 }

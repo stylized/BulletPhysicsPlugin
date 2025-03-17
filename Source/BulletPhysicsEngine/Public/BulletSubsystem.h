@@ -22,7 +22,9 @@ class ABulletGameState;
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
+DECLARE_MULTICAST_DELEGATE(FOnPostFrame);
 DECLARE_MULTICAST_DELEGATE_OneParam(FAddToSnapshot, FPhysicsSceneSnapshot&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnRollbackStart, float);
 
 struct FClosestRayResultWithExclude : btCollisionWorld::ClosestRayResultCallback
 {
@@ -64,6 +66,23 @@ struct FClosestConvexResultWithExclude : btCollisionWorld::ClosestConvexResultCa
 	const btCollisionObject* m_excludeObject;
 };
 
+
+class CustomBulletWorld : public btDiscreteDynamicsWorld
+{
+public:
+	CustomBulletWorld(btDispatcher* dispatcher, btBroadphaseInterface* pairCache, btConstraintSolver* constraintSolver, btCollisionConfiguration* collisionConfiguration)
+		: btDiscreteDynamicsWorld(dispatcher, pairCache, constraintSolver, collisionConfiguration)
+	{
+	}
+
+	virtual int stepSimulation(btScalar timeStep, int maxSubSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.)) override;
+
+	btScalar getLocalTime() const
+	{
+		return m_localTime;
+	}
+};
+
 UCLASS()
 	class BULLETPHYSICSENGINE_API UBulletSubsystem : public UTickableWorldSubsystem
 {
@@ -74,8 +93,12 @@ UCLASS()
 		FOnPhysicsTick OnPhysicsTickDelegate;
 		/// Called after Bullet simulation has run for a frame (one or more ticks)
 		FOnPostPhysicsFrame OnPostPhysicsFrameDelegate;
+		/// Called after Bullet subsystem frame, regardless of whether there was a simulation tick
+		FOnPostFrame OnPostFrameDelegate;
 		/// Used for objects to add themself to the physics scene snapshots sent from the server
 		FAddToSnapshot AddToSnapshotDelegate;
+		/// Called before the first simulation tick of a rollback
+		FOnRollbackStart OnRollbackStartDelegate;
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Objects")
 			void AddStaticBody(AActor* Body, float Friction, float Restitution,int &ID);
@@ -149,6 +172,9 @@ UCLASS()
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
 		float GetTimeSeconds() const { return TickCount * PhysicsDeltaTime; }
 
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		float GetInterpolatedTimeSeconds() const { return GetTimeSeconds() + BtWorld->getLocalTime(); }
+
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Networking")
 		bool IsRollback() const { return bIsRollback; }
 
@@ -192,7 +218,7 @@ private:
 		btCollisionDispatcher* BtCollisionDispatcher;
 		btBroadphaseInterface* BtBroadphase;
 		btConstraintSolver* BtConstraintSolver;
-		btDiscreteDynamicsWorld* BtWorld;
+		CustomBulletWorld* BtWorld;
 		BulletHelpers* BulletHelpers;
 		BulletDebugDraw* btdebugdraw;
 		btStaticPlaneShape* plane;
@@ -243,7 +269,7 @@ private:
 		bool bIsSkipping;
 
 	public:
-		btDiscreteDynamicsWorld* GetBulletWorld() const {return BtWorld;};
+		CustomBulletWorld* GetBulletWorld() const { return BtWorld; }
 
 		void RayTestSingle(FVector Start, FVector End, int CheckObjectID, void (*HitCallback)(const FVector&, const FVector&));
 
