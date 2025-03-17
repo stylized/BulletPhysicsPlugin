@@ -58,11 +58,6 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 
 }
 
-
-void UBulletSubsystem::Deinitialize() {
-
-}
-
 void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	FName bulletStaticTag = FName("B_STATIC");
