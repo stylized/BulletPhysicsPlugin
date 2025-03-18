@@ -140,6 +140,11 @@ void UBulletPhysicsComponent::ResetGravity()
 	RigidBody->setGravity(BulletSubsystem->GetBulletWorld()->getGravity());
 }
 
+void UBulletPhysicsComponent::ClearForces()
+{
+	RigidBody->clearForces();
+}
+
 void UBulletPhysicsComponent::TickPhysics(float DeltaTime)
 {
 	OnTickPhysics.Broadcast(DeltaTime);

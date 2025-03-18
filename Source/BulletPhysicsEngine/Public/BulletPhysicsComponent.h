@@ -68,6 +68,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void ResetGravity();
 
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void ClearForces();
+
 	virtual void TickPhysics(float DeltaTime);
 
 	virtual void OnRollbackStart(float RollbackTime);
