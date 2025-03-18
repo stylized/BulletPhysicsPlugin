@@ -1,5 +1,6 @@
 #include "NetworkedPhysicsComponent.h"
 #include "BulletPlayerController.h"
+#include "NetHelper.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/NetConnection.h"
@@ -74,10 +75,10 @@ void UNetworkedPhysicsComponent::PostPhysicsFrame()
 
 void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 {
-	FVector Location;
-	FQuat Rotation;
-	FVector LinearVelocity;
-	FVector AngularVelocity;
+	FVector3f Location;
+	FQuat4f Rotation;
+	FVector3f LinearVelocity;
+	FVector3f AngularVelocity;
 	FUserCmd UserCmd;
 
 	const bool bIsPawn = GetOwner()->IsA<APawn>();
@@ -85,10 +86,10 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 	if (Ar.IsSaving())
 	{
 		const FTransform Transform = GetCenterOfMassTransform();
-		Location = Transform.GetLocation();
-		Rotation = Transform.GetRotation();
-		LinearVelocity = GetLinearVelocity();
-		AngularVelocity = GetAngularVelocity();
+		Location = DoubleToFloat(Transform.GetLocation());
+		Rotation = DoubleToFloat(Transform.GetRotation());
+		LinearVelocity = DoubleToFloat(GetLinearVelocity());
+		AngularVelocity = DoubleToFloat(GetAngularVelocity());
 
 		if (bIsPawn)
 		{
@@ -108,9 +109,9 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 
 	if (Ar.IsLoading())
 	{
-		SetCenterOfMassTransform(FTransform(Rotation, Location));
-		SetLinearVelocity(LinearVelocity);
-		SetAngularVelocity(AngularVelocity);
+		SetCenterOfMassTransform(FTransform(FloatToDouble(Rotation), FloatToDouble(Location)));
+		SetLinearVelocity(FloatToDouble(LinearVelocity));
+		SetAngularVelocity(FloatToDouble(AngularVelocity));
 
 		if (bIsPawn && GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
 		{
