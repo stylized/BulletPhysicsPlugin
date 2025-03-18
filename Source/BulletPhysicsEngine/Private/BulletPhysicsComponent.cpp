@@ -145,6 +145,39 @@ void UBulletPhysicsComponent::ClearForces()
 	RigidBody->clearForces();
 }
 
+void UBulletPhysicsComponent::SetKinematic(bool bKinematic)
+{
+	bIsKinematic = bKinematic;
+
+	if (!HasBegunPlay())
+	{
+		return;
+	}
+
+	if (bKinematic)
+	{
+		RigidBody->setCollisionFlags(RigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+	}
+	else
+	{
+		RigidBody->setCollisionFlags(RigidBody->getCollisionFlags() & ~btCollisionObject::CF_KINEMATIC_OBJECT);
+	}
+}
+
+void UBulletPhysicsComponent::SetMass(float NewMass)
+{
+	Mass = NewMass;
+
+	if (!HasBegunPlay())
+	{
+		return;
+	}
+
+	btVector3 Inertia;
+	RigidBody->getCollisionShape()->calculateLocalInertia(NewMass, Inertia);
+	RigidBody->setMassProps(NewMass, Inertia);
+}
+
 void UBulletPhysicsComponent::TickPhysics(float DeltaTime)
 {
 	OnTickPhysics.Broadcast(DeltaTime);

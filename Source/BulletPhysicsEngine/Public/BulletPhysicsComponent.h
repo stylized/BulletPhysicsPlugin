@@ -71,6 +71,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void ClearForces();
 
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void SetKinematic(bool bKinematic);
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void SetMass(float NewMass);
+
 	virtual void TickPhysics(float DeltaTime);
 
 	virtual void OnRollbackStart(float RollbackTime);
