@@ -3,6 +3,7 @@
 
 #include "BulletSubsystem.h"
 #include "BulletPhysicsComponent.h"
+#include "BulletPhysicsEngine/bthelper.h"
 #include "BulletPlayerController.h"
 #include "Engine/EngineBaseTypes.h"
 #include "NetworkedPhysicsComponent.h"
@@ -260,8 +261,8 @@ void UBulletSubsystem::NotifyCollisions()
 						.LocalPointOnOther = BulletHelpers::ToUEPos(Point.m_localPointB),
 						.PointOnSelf = BulletHelpers::ToUEPos(Point.m_positionWorldOnA),
 						.PointOnOther = BulletHelpers::ToUEPos(Point.m_positionWorldOnB),
-						.Normal = BulletHelpers::ToUEDir(Point.m_normalWorldOnB),
-						.AppliedImpulse = Point.m_appliedImpulse,
+						.Normal = BulletHelpers::ToUEDir(Point.m_normalWorldOnB, false),
+						.AppliedImpulse = Point.m_appliedImpulse * BULLET_TO_WORLD_SCALE,
 						.OtherObject = Manifold->getBody1()
 					});
 				}
@@ -273,8 +274,8 @@ void UBulletSubsystem::NotifyCollisions()
 						.LocalPointOnOther = BulletHelpers::ToUEPos(Point.m_localPointA),
 						.PointOnSelf = BulletHelpers::ToUEPos(Point.m_positionWorldOnB),
 						.PointOnOther = BulletHelpers::ToUEPos(Point.m_positionWorldOnA),
-						.Normal = -BulletHelpers::ToUEDir(Point.m_normalWorldOnB),
-						.AppliedImpulse = Point.m_appliedImpulse,
+						.Normal = -BulletHelpers::ToUEDir(Point.m_normalWorldOnB, false),
+						.AppliedImpulse = Point.m_appliedImpulse * BULLET_TO_WORLD_SCALE,
 						.OtherObject = Manifold->getBody0()
 					});
 				}
