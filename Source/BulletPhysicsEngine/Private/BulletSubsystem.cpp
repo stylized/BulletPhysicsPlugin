@@ -118,6 +118,7 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	{
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
 		BulletSubsystem->NotifyCollisions();
+		BulletSubsystem->OnPostPhysicsTickDelegate.Broadcast(TimeStep);
 	}, this, false);
 
 	UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem:: Bullet world init"));

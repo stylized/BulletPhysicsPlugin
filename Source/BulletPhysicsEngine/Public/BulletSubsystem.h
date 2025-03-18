@@ -19,6 +19,7 @@
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPostPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
 DECLARE_MULTICAST_DELEGATE(FOnPostFrame);
 DECLARE_MULTICAST_DELEGATE_OneParam(FAddToSnapshot, FPhysicsSceneSnapshot&);
@@ -99,6 +100,8 @@ UCLASS()
 	public:
 		/// Called before each Bullet physics tick, used to add forces
 		FOnPhysicsTick OnPhysicsTickDelegate;
+		/// Called after each Bullet physics tick and after collision notify
+		FOnPhysicsTick OnPostPhysicsTickDelegate;
 		/// Called after Bullet simulation has run for a frame (one or more ticks)
 		FOnPostPhysicsFrame OnPostPhysicsFrameDelegate;
 		/// Called after Bullet subsystem frame, regardless of whether there was a simulation tick

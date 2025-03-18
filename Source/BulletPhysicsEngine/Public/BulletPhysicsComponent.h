@@ -5,6 +5,7 @@
 #include "BulletPhysicsComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTickPhysics, float, DeltaTime);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPostTickPhysics, float, DeltaTime);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpdateKinematic, float, CurrentTime);
 
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
@@ -78,6 +79,8 @@ public:
 
 	virtual void TickPhysics(float DeltaTime);
 
+	virtual void PostTickPhysics(float DeltaTime);
+
 	virtual void OnRollbackStart(float RollbackTime);
 
 	virtual void UpdateKinematic(float CurrentTime);
@@ -94,6 +97,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnTickPhysics OnTickPhysics;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPostTickPhysics OnPostTickPhysics;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnUpdateKinematic OnUpdateKinematic;

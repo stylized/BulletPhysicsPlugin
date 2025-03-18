@@ -6,6 +6,7 @@ void UBulletPhysicsComponent::BeginPlay()
 
 	BulletSubsystem = GetWorld()->GetSubsystem<UBulletSubsystem>();
 	BulletSubsystem->OnPhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::TickPhysics);
+	BulletSubsystem->OnPostPhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::PostTickPhysics);
 	BulletSubsystem->OnPostPhysicsFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostPhysicsFrame);
 	BulletSubsystem->OnPostFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostFrame);
 	BulletSubsystem->OnRollbackStartDelegate.AddUObject(this, &UBulletPhysicsComponent::OnRollbackStart);
@@ -187,6 +188,11 @@ void UBulletPhysicsComponent::TickPhysics(float DeltaTime)
 		UpdateKinematic(BulletSubsystem->GetTimeSeconds());
 		SaveKinematicState(DeltaTime);
 	}
+}
+
+void UBulletPhysicsComponent::PostTickPhysics(float DeltaTime)
+{
+	OnPostTickPhysics.Broadcast(DeltaTime);
 }
 
 void UBulletPhysicsComponent::OnRollbackStart(float RollbackTime)
