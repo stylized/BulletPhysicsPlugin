@@ -17,8 +17,6 @@
 
 #include "BulletSubsystem.generated.h"
 
-class ABulletGameState;
-
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
@@ -317,6 +315,4 @@ private:
 		void ExtractPhysicsGeometry(const FTransform& XformSoFar, UBodySetup* BodySetup, PhysicsGeometryCallback CB);
 
 		const UBulletSubsystem::CachedDynamicShapeData& GetCachedDynamicShapeData(AActor* Actor, float Mass);
-
-		ABulletGameState* GameState;
 };

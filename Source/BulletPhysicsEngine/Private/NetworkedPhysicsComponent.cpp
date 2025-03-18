@@ -1,4 +1,5 @@
 #include "NetworkedPhysicsComponent.h"
+#include "BulletPlayerController.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/NetConnection.h"
@@ -143,7 +144,11 @@ const FUserCmd& UNetworkedPhysicsComponent::GetUserCmd(int32 TickCount)
 	else
 	{
 		// Use last received usercmd if the server runs out
-		UE_LOG(LogNetworkedPhysics, Warning, TEXT("UserCmd not received in time for tick %d latest was %d"), TickCount, LatestUserCmd.TickCount);
+		if (GetOwner()->GetRemoteRole() == ROLE_AutonomousProxy)
+		{
+			UE_LOG(LogNetworkedPhysics, Warning, TEXT("UserCmd not received in time for tick %d latest was %d"), TickCount, LatestUserCmd.TickCount);
+		}
+
 		return LatestUserCmd;
 	}
 }
@@ -219,6 +224,14 @@ void UNetworkedPhysicsComponent::ClientReadSnapshot(const FPhysicsObjectSnapshot
 		return;
 	}
 
+	SnapshotBitReader.PackageMap = PackedBits.GetPackageMap();
+
+	if (SnapshotBitReader.PackageMap == nullptr)
+	{
+		UE_LOG(LogNetworkedPhysics, Error, TEXT("ClientReadSnapshot: Failed to find PackageMap for data serialization!"));
+		return;
+	}
+
 	// Reuse bit reader to avoid allocating memory each time
 	SnapshotBitReader.SetData((uint8*)PackedBits.DataBits.GetData(), NumBits);
 
@@ -238,7 +251,7 @@ void UNetworkedPhysicsComponent::AddToSnapshot(FPhysicsSceneSnapshot& Snapshot)
 	PackedBits.Object = this;
 
 	// Extract the net package map used for serializing object references.
-	UNetConnection* NetConnection = GetOwner()->GetNetConnection();
+	UNetConnection* NetConnection = Snapshot.Receiver->GetNetConnection();
 	SnapshotBitWriter.PackageMap = NetConnection ? ToRawPtr(NetConnection->PackageMap) : nullptr;
 
 	if (SnapshotBitWriter.PackageMap == nullptr)

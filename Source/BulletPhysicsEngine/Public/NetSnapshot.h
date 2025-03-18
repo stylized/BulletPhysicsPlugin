@@ -4,6 +4,7 @@
 #include "Serialization/Archive.h"
 #include "NetSnapshot.generated.h"
 
+class ABulletPlayerController;
 class UNetworkedPhysicsComponent;
 
 constexpr size_t OBJECT_SNAPSHOT_PACKEDBITS_RESERVED_SIZE = 1024;
@@ -41,6 +42,8 @@ USTRUCT()
 struct FPhysicsSceneSnapshot
 {
 	GENERATED_BODY()
+
+	ABulletPlayerController* Receiver;
 
 	UPROPERTY()
 	int32 TickCount;

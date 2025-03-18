@@ -2,8 +2,8 @@
 
 
 #include "BulletSubsystem.h"
-#include "BulletGameState.h"
 #include "BulletPhysicsComponent.h"
+#include "BulletPlayerController.h"
 #include "Engine/EngineBaseTypes.h"
 #include "NetworkedPhysicsComponent.h"
 
@@ -152,13 +152,6 @@ void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 			AddRigidBody(actor, 0.5f, 0.f, dummyID, 10.f);
 		}
 	}
-
-	GameState = InWorld.GetGameState<ABulletGameState>();
-
-	if (GameState == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("UBulletSubsystem::OnWorldBeginPlay: Game state is not an ABulletGameState, networking won't work"));
-	}
 }
 
 void UBulletSubsystem::Tick(float deltaTime)
@@ -274,14 +267,18 @@ void UBulletSubsystem::NotifyCollisions()
 
 void UBulletSubsystem::ServerBroadcastSnapshot()
 {
-	if (GameState == nullptr)
+	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 	{
-		return;
+		if (APlayerController* Controller = Iterator->Get())
+		{
+			if (ABulletPlayerController* BulletController = Cast<ABulletPlayerController>(Controller))
+			{
+				FPhysicsSceneSnapshot Snapshot { .Receiver = BulletController, .TickCount = GetTickCount() };
+				AddToSnapshotDelegate.Broadcast(Snapshot);
+				BulletController->ClientReceiveSnapshot(Snapshot);
+			}
+		}
 	}
-
-	FPhysicsSceneSnapshot Snapshot { .TickCount = GetTickCount() };
-	AddToSnapshotDelegate.Broadcast(Snapshot);
-	GameState->MulticastReceiveSnapshot(Snapshot);
 }
 
 void UBulletSubsystem::SetupStaticGeometryPhysics(TArray<AActor*> Actors, float Friction, float Restitution)

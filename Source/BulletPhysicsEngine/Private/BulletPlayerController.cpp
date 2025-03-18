@@ -1,17 +1,17 @@
-#include "BulletGameState.h"
+#include "BulletPlayerController.h"
 #include "BulletSubsystem.h"
 #include "NetworkedPhysicsComponent.h"
 
-void ABulletGameState::BeginPlay()
+void ABulletPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
 	BulletSubsystem = GetWorld()->GetSubsystem<UBulletSubsystem>();
 }
 
-void ABulletGameState::MulticastReceiveSnapshot_Implementation(const FPhysicsSceneSnapshot& Snapshot)
+void ABulletPlayerController::ClientReceiveSnapshot_Implementation(const FPhysicsSceneSnapshot& Snapshot)
 {
-	if (HasAuthority())
+	if (BulletSubsystem == nullptr)
 	{
 		return;
 	}
