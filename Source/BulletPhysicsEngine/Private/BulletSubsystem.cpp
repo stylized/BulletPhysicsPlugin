@@ -217,8 +217,10 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 	{
 		OnPostPhysicsFrameDelegate.Broadcast();
 
-		if (GetWorld()->GetNetMode() < NM_Client)
+		switch (GetWorld()->GetNetMode())
 		{
+		case NM_DedicatedServer:
+		case NM_ListenServer:
 			// Send a snapshot of the updated world to clients
 			ServerBroadcastSnapshot();
 		}
