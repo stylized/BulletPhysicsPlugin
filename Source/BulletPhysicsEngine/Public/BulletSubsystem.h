@@ -64,6 +64,16 @@ struct FClosestConvexResultWithExclude : btCollisionWorld::ClosestConvexResultCa
 	const btCollisionObject* m_excludeObject;
 };
 
+struct FContactPoint
+{
+	FVector LocalPointOnSelf;
+	FVector LocalPointOnOther;
+	FVector PointOnSelf;
+	FVector PointOnOther;
+	FVector Normal;
+	btScalar AppliedImpulse;
+	const btCollisionObject* OtherObject;
+};
 
 class CustomBulletWorld : public btDiscreteDynamicsWorld
 {

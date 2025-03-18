@@ -91,6 +91,18 @@ FRotator UBulletPhysicsComponent::GetRotation() const
 	return GetQuaternion().Rotator();
 }
 
+FVector UBulletPhysicsComponent::GetFinalLinearVelocity() const
+{
+	const btVector3 ForceImpulse = RigidBody->getTotalForce() * RigidBody->getInvMass() * BulletSubsystem->PhysicsDeltaTime;
+	return BulletHelpers::ToUEDir(RigidBody->getLinearVelocity() + ForceImpulse);
+}
+
+FVector UBulletPhysicsComponent::GetFinalAngularVelocity() const
+{
+	const btVector3 TorqueImpulse = RigidBody->getTotalTorque() * RigidBody->getInvInertiaTensorWorld() * BulletSubsystem->PhysicsDeltaTime;
+	return BulletHelpers::ToUEDir(RigidBody->getAngularVelocity() + TorqueImpulse);
+}
+
 void UBulletPhysicsComponent::SetCenterOfMassTransform(const FTransform& Transform)
 {
 	if (bIsKinematic)
@@ -116,6 +128,16 @@ void UBulletPhysicsComponent::SetAngularVelocity(const FVector& Velocity)
 void UBulletPhysicsComponent::SaveKinematicState(float DeltaTime)
 {
 	RigidBody->saveKinematicState(DeltaTime);
+}
+
+void UBulletPhysicsComponent::SetGravity(const FVector& Gravity)
+{
+	RigidBody->setGravity(BulletHelpers::ToBtDir(Gravity));
+}
+
+void UBulletPhysicsComponent::ResetGravity()
+{
+	RigidBody->setGravity(BulletSubsystem->GetBulletWorld()->getGravity());
 }
 
 void UBulletPhysicsComponent::TickPhysics(float DeltaTime)

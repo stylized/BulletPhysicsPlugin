@@ -255,12 +255,28 @@ void UBulletSubsystem::NotifyCollisions()
 
 				if (ComponentA != nullptr)
 				{
-					ComponentA->OnNotifyCollision(Point);
+					ComponentA->OnNotifyCollision({
+						.LocalPointOnSelf = BulletHelpers::ToUEPos(Point.m_localPointA),
+						.LocalPointOnOther = BulletHelpers::ToUEPos(Point.m_localPointB),
+						.PointOnSelf = BulletHelpers::ToUEPos(Point.m_positionWorldOnA),
+						.PointOnOther = BulletHelpers::ToUEPos(Point.m_positionWorldOnB),
+						.Normal = BulletHelpers::ToUEDir(Point.m_normalWorldOnB),
+						.AppliedImpulse = Point.m_appliedImpulse,
+						.OtherObject = Manifold->getBody1()
+					});
 				}
 
 				if (ComponentB != nullptr)
 				{
-					ComponentB->OnNotifyCollision(Point);
+					ComponentB->OnNotifyCollision({
+						.LocalPointOnSelf = BulletHelpers::ToUEPos(Point.m_localPointB),
+						.LocalPointOnOther = BulletHelpers::ToUEPos(Point.m_localPointA),
+						.PointOnSelf = BulletHelpers::ToUEPos(Point.m_positionWorldOnB),
+						.PointOnOther = BulletHelpers::ToUEPos(Point.m_positionWorldOnA),
+						.Normal = -BulletHelpers::ToUEDir(Point.m_normalWorldOnB),
+						.AppliedImpulse = Point.m_appliedImpulse,
+						.OtherObject = Manifold->getBody0()
+					});
 				}
 			}
 		}

@@ -47,6 +47,13 @@ public:
 	FRotator GetRotation() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	/// Get the linear velocity including any forces set to be added this tick
+	FVector GetFinalLinearVelocity();
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	/// Get the angular velocity including any torque set to be added this tick
+	FVector GetFinalAngularVelocity();
+
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void SetCenterOfMassTransform(const FTransform& Transform);
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void SetLinearVelocity(const FVector& Velocity);
@@ -55,6 +62,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void SaveKinematicState(float DeltaTime);
+
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void SetGravity(const FVector& Gravity);
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	void ResetGravity();
 
 	virtual void TickPhysics(float DeltaTime);
 
@@ -68,7 +80,7 @@ public:
 
 	virtual void PostFrame();
 
-	virtual void OnNotifyCollision(const btManifoldPoint& Point)
+	virtual void OnNotifyCollision(const FContactPoint& Point)
 	{
 	}
 
