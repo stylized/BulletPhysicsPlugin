@@ -74,31 +74,45 @@ void UNetworkedPhysicsComponent::PostPhysicsFrame()
 
 void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 {
-	FTransform Transform;
+	FVector Location;
+	FQuat Rotation;
 	FVector LinearVelocity;
 	FVector AngularVelocity;
 	FUserCmd UserCmd;
 
+	const bool bIsPawn = GetOwner()->IsA<APawn>();
+
 	if (Ar.IsSaving())
 	{
-		Transform = GetCenterOfMassTransform();
+		const FTransform Transform = GetCenterOfMassTransform();
+		Location = Transform.GetLocation();
+		Rotation = Transform.GetRotation();
 		LinearVelocity = GetLinearVelocity();
 		AngularVelocity = GetAngularVelocity();
-		UserCmd = LatestUserCmd;
+
+		if (bIsPawn)
+		{
+			UserCmd = LatestUserCmd;
+		}
 	}
 
-	Ar << Transform;
+	Ar << Location;
+	Ar << Rotation;
 	Ar << LinearVelocity;
 	Ar << AngularVelocity;
-	Ar << UserCmd;
+
+	if (bIsPawn)
+	{
+		Ar << UserCmd;
+	}
 
 	if (Ar.IsLoading())
 	{
-		SetCenterOfMassTransform(Transform);
+		SetCenterOfMassTransform(FTransform(Rotation, Location));
 		SetLinearVelocity(LinearVelocity);
 		SetAngularVelocity(AngularVelocity);
 
-		if (GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
+		if (bIsPawn && GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
 		{
 			LatestUserCmd = UserCmd;
 		}
