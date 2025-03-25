@@ -53,6 +53,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	/// Get the angular velocity including any torque set to be added this tick
 	FVector GetFinalAngularVelocity() const;
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	/// Get the velocity at a given point including any forces and torque set to be added this tick
+	FVector GetFinalVelocityAtOffset(const FVector& Offset) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	void SetCenterOfMassTransform(const FTransform& Transform);

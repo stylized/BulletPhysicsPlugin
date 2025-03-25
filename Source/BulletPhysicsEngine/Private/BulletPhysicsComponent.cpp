@@ -104,6 +104,15 @@ FVector UBulletPhysicsComponent::GetFinalAngularVelocity() const
 	return BulletHelpers::ToUEDir(RigidBody->getAngularVelocity() + TorqueImpulse);
 }
 
+FVector UBulletPhysicsComponent::GetFinalVelocityAtOffset(const FVector& Offset) const
+{
+	const btVector3 ForceImpulse = RigidBody->getTotalForce() * RigidBody->getInvMass() * BulletSubsystem->PhysicsDeltaTime;
+	const btVector3 TorqueImpulse = RigidBody->getTotalTorque() * RigidBody->getInvInertiaTensorWorld() * BulletSubsystem->PhysicsDeltaTime;
+	const btVector3 FinalLinearVelocity = RigidBody->getLinearVelocity() + ForceImpulse;
+	const btVector3 FinalAngularVelocity = RigidBody->getAngularVelocity() + TorqueImpulse;
+	return BulletHelpers::ToUEDir(FinalLinearVelocity + FinalAngularVelocity.cross(BulletHelpers::ToBtPos(Offset)));
+}
+
 void UBulletPhysicsComponent::SetCenterOfMassTransform(const FTransform& Transform)
 {
 	if (bIsKinematic)
