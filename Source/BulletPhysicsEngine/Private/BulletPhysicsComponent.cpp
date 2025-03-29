@@ -92,6 +92,11 @@ FRotator UBulletPhysicsComponent::GetRotation() const
 	return GetQuaternion().Rotator();
 }
 
+FVector UBulletPhysicsComponent::GetLocalInertia() const
+{
+	return BulletHelpers::ToUEDir(RigidBody->getLocalInertia(), false);
+}
+
 FVector UBulletPhysicsComponent::GetFinalLinearVelocity() const
 {
 	const btVector3 ForceImpulse = RigidBody->getTotalForce() * RigidBody->getInvMass() * BulletSubsystem->PhysicsDeltaTime;

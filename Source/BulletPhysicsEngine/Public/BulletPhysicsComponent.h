@@ -48,6 +48,9 @@ public:
 	FRotator GetRotation() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
+	FVector GetLocalInertia() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
 	/// Get the linear velocity including any forces set to be added this tick
 	FVector GetFinalLinearVelocity() const;
 	UFUNCTION(BlueprintCallable, Category = "Bullet Physics")
