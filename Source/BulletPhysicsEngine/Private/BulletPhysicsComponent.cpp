@@ -94,7 +94,7 @@ FRotator UBulletPhysicsComponent::GetRotation() const
 
 FVector UBulletPhysicsComponent::GetLocalInertia() const
 {
-	return BulletHelpers::ToUEDir(RigidBody->getLocalInertia(), false);
+	return BulletHelpers::ToUEDir(RigidBody->getLocalInertia());
 }
 
 FVector UBulletPhysicsComponent::GetFinalLinearVelocity() const
