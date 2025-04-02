@@ -129,13 +129,11 @@ public class BulletPhysicsEngineLibrary : ModuleRules
 			BuildBullet("Release");
 		}
 
-		string BuildPlatForm = "Win64";
 		string LibExtension = ".lib";
 		string BuildPrefix = "";
 
-		if (Target.Platform == UnrealTargetPlatform.Linux)
+		if (Target.Platform == UnrealTargetPlatform.Linux || Target.Platform == UnrealTargetPlatform.Mac)
 		{
-			BuildPlatForm = "Linux";
 			LibExtension = ".a";
 			BuildPrefix = "lib";
 			BuildSuffix = "";
