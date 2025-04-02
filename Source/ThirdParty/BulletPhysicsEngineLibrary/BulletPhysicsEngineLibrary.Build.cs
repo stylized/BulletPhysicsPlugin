@@ -142,7 +142,8 @@ public class BulletPhysicsEngineLibrary : ModuleRules
 		}
 
 		// Library path
-		string LibrariesPath = Path.Combine(ModuleDirectory, "lib", BuildPlatForm, BuildFolder);
+		string BulletBuildDir = BuildUtils.GetBulletBuildDir(ModuleDirectory, Target.Platform);
+		string LibrariesPath = Path.Combine(BulletBuildDir, BuildFolder);
 
 		string[] libraryNames = { "BulletCollision", "BulletDynamics", "LinearMath" };
 
