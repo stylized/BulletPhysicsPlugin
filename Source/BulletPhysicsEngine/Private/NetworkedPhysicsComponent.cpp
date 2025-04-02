@@ -21,7 +21,6 @@ UNetworkedPhysicsComponent::UNetworkedPhysicsComponent() : Super()
 {
 	PrimaryComponentTick.bCanEverTick = true;
     PrimaryComponentTick.bStartWithTickEnabled = true;
-	SetIsReplicated(true);
 
 	SnapshotBitWriter.SetAllowResize(true);
 }
