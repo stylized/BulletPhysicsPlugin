@@ -19,9 +19,6 @@ namespace NetworkedPhysicsCVars
 
 UNetworkedPhysicsComponent::UNetworkedPhysicsComponent() : Super()
 {
-	PrimaryComponentTick.bCanEverTick = true;
-    PrimaryComponentTick.bStartWithTickEnabled = true;
-
 	SnapshotBitWriter.SetAllowResize(true);
 }
 
@@ -32,55 +29,12 @@ void UNetworkedPhysicsComponent::BeginPlay()
 	BulletSubsystem->AddToSnapshotDelegate.AddUObject(this, &UNetworkedPhysicsComponent::AddToSnapshot);
 }
 
-void UNetworkedPhysicsComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	// Ack cmds per frame after receiving all RPCs
-	if (GetOwner()->HasAuthority() && LatestUserCmd.TickCount > LatestAckedCmdTick)
-	{
-		ClientAckUserCmd(LatestUserCmd.TickCount, BulletSubsystem->GetTickCount());
-		LatestAckedCmdTick = LatestUserCmd.TickCount;
-	}
-}
-
-void UNetworkedPhysicsComponent::TickPhysics(float DeltaTime)
-{
-	Super::TickPhysics(DeltaTime);
-
-	const ENetRole Role = GetOwner()->GetLocalRole();
-
-	if (Role == ROLE_AutonomousProxy && !BulletSubsystem->IsRollback())
-	{
-		FinalizeLatestUserCmd();
-	}
-
-	if (Role == ROLE_SimulatedProxy)
-	{
-		NetworkTickPhysics(LatestUserCmd, DeltaTime);
-	}
-	else
-	{
-		const FUserCmd& UserCmd = GetUserCmd(BulletSubsystem->GetTickCount());
-		NetworkTickPhysics(UserCmd, DeltaTime);
-	}
-}
-
-void UNetworkedPhysicsComponent::PostPhysicsFrame()
-{
-	if (GetOwner()->GetLocalRole() == ROLE_AutonomousProxy)
-	{
-		SendUnacknowledgedUserCmds();
-	}
-}
-
 void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 {
 	FVector3f Location;
 	FQuat4f Rotation;
 	FVector3f LinearVelocity;
 	FVector3f AngularVelocity;
-	FUserCmd UserCmd;
-
-	const bool bIsPawn = GetOwner()->IsA<APawn>();
 
 	if (Ar.IsSaving())
 	{
@@ -89,11 +43,6 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 		Rotation = DoubleToFloat(Transform.GetRotation());
 		LinearVelocity = DoubleToFloat(GetLinearVelocity());
 		AngularVelocity = DoubleToFloat(GetAngularVelocity());
-
-		if (bIsPawn)
-		{
-			UserCmd = LatestUserCmd;
-		}
 	}
 
 	Ar << Location;
@@ -101,125 +50,11 @@ void UNetworkedPhysicsComponent::SerializeSnapshot(FArchive& Ar)
 	Ar << LinearVelocity;
 	Ar << AngularVelocity;
 
-	if (bIsPawn)
-	{
-		Ar << UserCmd;
-	}
-
 	if (Ar.IsLoading())
 	{
 		SetCenterOfMassTransform(FTransform(FloatToDouble(Rotation), FloatToDouble(Location)));
 		SetLinearVelocity(FloatToDouble(LinearVelocity));
 		SetAngularVelocity(FloatToDouble(AngularVelocity));
-
-		if (bIsPawn && GetOwner()->GetLocalRole() == ROLE_SimulatedProxy)
-		{
-			LatestUserCmd = UserCmd;
-		}
-	}
-}
-
-void UNetworkedPhysicsComponent::FinalizeLatestUserCmd()
-{
-	const uint32 TickCount = BulletSubsystem->GetTickCount();
-	LatestUserCmd.TickCount = TickCount;
-	UserCmdBuffer[TickCount % UserCmdBufferSize] = LatestUserCmd;
-}
-
-void UNetworkedPhysicsComponent::SendUnacknowledgedUserCmds()
-{
-	TArray<FUserCmd> CmdsToSend;
-
-	for (const FUserCmd& UserCmd : UserCmdBuffer)
-	{
-		if (UserCmd.TickCount > LatestAckedCmdTick)
-		{
-			CmdsToSend.Add(UserCmd);
-		}
-	}
-
-	ServerReceiveUserCmds(CmdsToSend);
-}
-
-const FUserCmd& UNetworkedPhysicsComponent::GetUserCmd(int32 TickCount)
-{
-	if (GetWorld()->GetNetMode() == NM_Standalone)
-	{
-		// No usercmd networking
-		return LatestUserCmd;
-	}
-
-	const FUserCmd& UserCmd = UserCmdBuffer[TickCount % UserCmdBufferSize];
-
-	if (UserCmd.TickCount == TickCount)
-	{
-		return UserCmd;
-	}
-	else
-	{
-		// Use last received usercmd if the server runs out
-		if (GetOwner()->GetRemoteRole() == ROLE_AutonomousProxy)
-		{
-			UE_LOG(LogNetworkedPhysics, Warning, TEXT("UserCmd not received in time for tick %d latest was %d"), TickCount, LatestUserCmd.TickCount);
-		}
-
-		return LatestUserCmd;
-	}
-}
-
-void UNetworkedPhysicsComponent::SetInputForward(float Forward)
-{
-	LatestUserCmd.Throttle = Forward;
-}
-
-void UNetworkedPhysicsComponent::SetInputSide(float Side)
-{
-	LatestUserCmd.Steering = Side;
-}
-
-void UNetworkedPhysicsComponent::SetInputHandbrake(bool bHandbrake)
-{
-	LatestUserCmd.bHandbrake = bHandbrake;
-}
-
-void UNetworkedPhysicsComponent::SetInputDashLeft(bool bDashLeft)
-{
-	LatestUserCmd.bDashLeft = bDashLeft;
-}
-
-void UNetworkedPhysicsComponent::SetInputDashRight(bool bDashRight)
-{
-	LatestUserCmd.bDashRight = bDashRight;
-}
-
-void UNetworkedPhysicsComponent::ServerReceiveSingleUserCmd(const FUserCmd &UserCmd)
-{
-	UserCmdBuffer[UserCmd.TickCount % UserCmdBufferSize] = UserCmd;
-
-	if (UserCmd.TickCount > LatestUserCmd.TickCount)
-	{
-		LatestUserCmd = UserCmd;
-	}
-}
-
-void UNetworkedPhysicsComponent::ServerReceiveUserCmds_Implementation(const TArray<FUserCmd> &UserCmds)
-{
-	for (const FUserCmd& UserCmd : UserCmds)
-	{
-		ServerReceiveSingleUserCmd(UserCmd);
-	}
-}
-
-void UNetworkedPhysicsComponent::ClientAckUserCmd_Implementation(int32 CmdTickCount, int32 ServerTickCount)
-{
-	if (CmdTickCount > LatestAckedCmdTick)
-	{
-		LatestAckedCmdTick = CmdTickCount;
-	}
-
-	if (CmdTickCount < ServerTickCount + 4)
-	{
-		BulletSubsystem->SkipToTick(ServerTickCount + 6);
 	}
 }
 
