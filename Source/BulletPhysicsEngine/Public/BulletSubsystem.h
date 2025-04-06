@@ -179,7 +179,7 @@ UCLASS()
 
 		// Maximum number of Bullet simulation ticks per frame
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
-			int MaxTicksPerFrame = 64;
+			int MaxTicksPerFrame = 16;
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
 			int SubSteps=1;
