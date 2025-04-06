@@ -20,8 +20,8 @@
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPostPhysicsTick, float);
-DECLARE_MULTICAST_DELEGATE(FOnPostPhysicsFrame);
-DECLARE_MULTICAST_DELEGATE(FOnPostFrame);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPostPhysicsFrame, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPostFrame, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FAddToSnapshot, FPhysicsSceneSnapshot&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnRollbackStart, float);
 
@@ -101,6 +101,11 @@ public:
 	void setTimeScale(btScalar newTimeScale)
 	{
 		m_timeScale = newTimeScale;
+	}
+
+	int getExtraSimulationTicks() const
+	{
+		return m_extraSimulationTicks;
 	}
 
 	void addExtraSimulationTicks(int ticks)
@@ -227,6 +232,11 @@ UCLASS()
 		}
 
 		/// Additional ticks to advance the simulation by, bypassing max ticks per frame
+		int GetExtraSimulationTicks()
+		{
+			return BtWorld->getExtraSimulationTicks();
+		}
+
 		void AddExtraSimulationTicks(int Ticks)
 		{
 			BtWorld->addExtraSimulationTicks(Ticks);

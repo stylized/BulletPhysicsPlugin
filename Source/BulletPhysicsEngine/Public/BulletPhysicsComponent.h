@@ -91,11 +91,11 @@ public:
 
 	virtual void UpdateKinematic(float CurrentTime);
 
-	virtual void PostPhysicsFrame()
+	virtual void PostPhysicsFrame(float FrameDeltaTime)
 	{
 	}
 
-	virtual void PostFrame();
+	virtual void PostFrame(float FrameDeltaTime);
 
 	virtual void OnNotifyCollision(const FContactPoint& Point)
 	{

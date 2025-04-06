@@ -46,15 +46,19 @@ int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScal
 		//normally in bullet there'd be a saveKinematicState here, but we manually control that
 
 		//run one tick + any extra ticks we're told to run
-		for (int extraTick = 0; extraTick < m_extraSimulationTicks + 1; extraTick++)
+		applyGravity();
+		internalSingleStepSimulation(fixedTimeStep);
+		clearForces();
+		numSubSteps++;
+
+		while (m_extraSimulationTicks > 0)
 		{
 			applyGravity();
 			internalSingleStepSimulation(fixedTimeStep);
 			clearForces();
+			m_extraSimulationTicks--;
 			numSubSteps++;
 		}
-
-		m_extraSimulationTicks = 0;
 	}
 
 	synchronizeMotionStates();
@@ -209,7 +213,7 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 
 	if (GetTickCount() != PreUpdateTickCount)
 	{
-		OnPostPhysicsFrameDelegate.Broadcast();
+		OnPostPhysicsFrameDelegate.Broadcast(DeltaSeconds);
 
 		switch (GetWorld()->GetNetMode())
 		{
@@ -220,7 +224,7 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 		}
 	}
 
-	OnPostFrameDelegate.Broadcast();
+	OnPostFrameDelegate.Broadcast(DeltaSeconds);
 
 #if WITH_EDITOR
 	if (DebugEnabled) {

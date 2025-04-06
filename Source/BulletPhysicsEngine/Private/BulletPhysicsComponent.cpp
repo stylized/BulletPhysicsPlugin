@@ -224,7 +224,7 @@ void UBulletPhysicsComponent::UpdateKinematic(float CurrentTime)
 	OnUpdateKinematic.Broadcast(CurrentTime);
 }
 
-void UBulletPhysicsComponent::PostFrame()
+void UBulletPhysicsComponent::PostFrame(float FrameDeltaTime)
 {
 	UpdateKinematic(BulletSubsystem->GetInterpolatedTimeSeconds());
 }
