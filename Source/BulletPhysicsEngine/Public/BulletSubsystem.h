@@ -93,11 +93,6 @@ public:
 		return m_localTime;
 	}
 
-	void addLocalTime(btScalar time)
-	{
-		m_localTime += time;
-	}
-
 	btScalar getTimeScale() const
 	{
 		return m_timeScale;
@@ -108,8 +103,14 @@ public:
 		m_timeScale = newTimeScale;
 	}
 
+	void addExtraSimulationTicks(int ticks)
+	{
+		m_extraSimulationTicks += ticks;
+	}
+
 private:
 	btScalar m_timeScale = 1.;
+	int m_extraSimulationTicks = 0;
 };
 
 UCLASS()
@@ -184,7 +185,7 @@ UCLASS()
 
 		// Maximum number of Bullet simulation ticks per frame
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
-			int MaxTicksPerFrame = 16;
+			int MaxTicksPerFrame = 64;
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Physics|Objects")
 			int SubSteps=1;
@@ -225,10 +226,10 @@ UCLASS()
 			TickToSkipTo = SkipTick;
 		}
 
-		/// Additional time to advance the simulation by
-		void AddTimeToSimulation(float Time)
+		/// Additional ticks to advance the simulation by, bypassing max ticks per frame
+		void AddExtraSimulationTicks(int Ticks)
 		{
-			BtWorld->addLocalTime(Time);
+			BtWorld->addExtraSimulationTicks(Ticks);
 		}
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")

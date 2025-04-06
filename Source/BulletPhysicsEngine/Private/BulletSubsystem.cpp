@@ -28,10 +28,10 @@ int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScal
 		gDisableDeactivation = (debugDrawer->getDebugMode() & btIDebugDraw::DBG_NoDeactivation) != 0;
 	}
 
-	int numSubSteps;
+	int numSubSteps = 0;
 
 	//clamp the number of substeps, to prevent simulation grinding spiralling down to a halt
-	for (numSubSteps = 0; numSubSteps < maxSubSteps; numSubSteps++)
+	while (numSubSteps < maxSubSteps)
 	{
 		//fixed timestep with interpolation
 		const btScalar scaledTimeStep = fixedTimeStep / getTimeScale();
@@ -45,9 +45,16 @@ int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScal
 
 		//normally in bullet there'd be a saveKinematicState here, but we manually control that
 
-		applyGravity();
-		internalSingleStepSimulation(fixedTimeStep);
-		clearForces();
+		//run one tick + any extra ticks we're told to run
+		for (int extraTick = 0; extraTick < m_extraSimulationTicks + 1; extraTick++)
+		{
+			applyGravity();
+			internalSingleStepSimulation(fixedTimeStep);
+			clearForces();
+			numSubSteps++;
+		}
+
+		m_extraSimulationTicks = 0;
 	}
 
 	synchronizeMotionStates();
