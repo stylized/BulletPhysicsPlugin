@@ -198,7 +198,7 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 		bIsSkipping = false;
 	}
 
-	BtWorld->stepSimulation(DeltaSeconds, 64, FixedTimeStep);
+	BtWorld->stepSimulation(DeltaSeconds, MaxTicksPerFrame, FixedTimeStep);
 
 	if (GetTickCount() != PreUpdateTickCount)
 	{
