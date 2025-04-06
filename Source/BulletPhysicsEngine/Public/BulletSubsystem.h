@@ -93,6 +93,11 @@ public:
 		return m_localTime;
 	}
 
+	void addLocalTime(btScalar time)
+	{
+		m_localTime += time;
+	}
+
 	btScalar getTimeScale() const
 	{
 		return m_timeScale;
@@ -218,6 +223,12 @@ UCLASS()
 		{
 			bIsSkipping = true;
 			TickToSkipTo = SkipTick;
+		}
+
+		/// Additional time to advance the simulation by
+		void AddTimeToSimulation(float Time)
+		{
+			BtWorld->addLocalTime(Time);
 		}
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
