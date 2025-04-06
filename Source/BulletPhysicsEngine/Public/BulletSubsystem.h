@@ -86,10 +86,25 @@ public:
 
 	virtual int stepSimulation(btScalar timeStep, int maxSubSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.)) override;
 
+	virtual void stepTicks(int subSteps = 1, btScalar fixedTimeStep = btScalar(1.) / btScalar(60.));
+
 	btScalar getLocalTime() const
 	{
 		return m_localTime;
 	}
+
+	btScalar getTimeScale() const
+	{
+		return m_timeScale;
+	}
+
+	void setTimeScale(btScalar newTimeScale)
+	{
+		m_timeScale = newTimeScale;
+	}
+
+private:
+	btScalar m_timeScale = 1.;
 };
 
 UCLASS()
@@ -184,7 +199,7 @@ UCLASS()
 		float GetTimeSeconds() const { return TickCount * PhysicsDeltaTime; }
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
-		float GetInterpolatedTimeSeconds() const { return GetTimeSeconds() + BtWorld->getLocalTime(); }
+		float GetInterpolatedTimeSeconds() const { return GetTimeSeconds() + BtWorld->getLocalTime() * SavedTimeScale; }
 
 		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Networking")
 		bool IsRollback() const { return bIsRollback; }
@@ -200,6 +215,15 @@ UCLASS()
 			bIsSkipping = true;
 			TickToSkipTo = SkipTick;
 		}
+
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		float GetTimeScale() const { return BtWorld->getTimeScale(); }
+
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		void SetTimeScale(float NewTimeScale) { BtWorld->setTimeScale(NewTimeScale); }
+
+		UFUNCTION(BlueprintCallable, Category = "Bullet Physics|Time")
+		float GetRealDeltaTime() const { return PhysicsDeltaTime / GetTimeScale(); }
 
 		void RayTestSingle(FVector Start, FVector End, int CheckObjectID, std::function<void(const FVector&, const FVector&, const bool&)> HitCallback);
 
@@ -271,11 +295,14 @@ private:
 
 		int32 TickCount;
 
+		/// We save timescale so that changes to timescale don't affect GetInterpolatedTimeSeconds until the next tick
+		float SavedTimeScale = 1.f;
+
 		int32 RollbackStartTick;
 
-		bool bIsRollback;
-
 		int32 TickToSkipTo;
+
+		bool bIsRollback;
 
 		bool bIsSkipping;
 

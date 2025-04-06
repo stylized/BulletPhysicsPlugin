@@ -19,36 +19,7 @@ int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScal
 {
 	startProfiling(timeStep);
 
-	int numSimulationSubSteps = 0;
-
-	if (maxSubSteps)
-	{
-		//fixed timestep with interpolation
-		m_fixedTimeStep = fixedTimeStep;
-		m_localTime += timeStep;
-		if (m_localTime >= fixedTimeStep)
-		{
-			numSimulationSubSteps = int(m_localTime / fixedTimeStep);
-			m_localTime -= numSimulationSubSteps * fixedTimeStep;
-		}
-	}
-	else
-	{
-		//variable timestep
-		fixedTimeStep = timeStep;
-		m_localTime = m_latencyMotionStateInterpolation ? 0 : timeStep;
-		m_fixedTimeStep = 0;
-		if (btFuzzyZero(timeStep))
-		{
-			numSimulationSubSteps = 0;
-			maxSubSteps = 0;
-		}
-		else
-		{
-			numSimulationSubSteps = 1;
-			maxSubSteps = 1;
-		}
-	}
+	m_localTime += timeStep;
 
 	//process some debugging flags
 	if (getDebugDrawer())
@@ -56,34 +27,63 @@ int CustomBulletWorld::stepSimulation(btScalar timeStep, int maxSubSteps, btScal
 		btIDebugDraw* debugDrawer = getDebugDrawer();
 		gDisableDeactivation = (debugDrawer->getDebugMode() & btIDebugDraw::DBG_NoDeactivation) != 0;
 	}
-	if (numSimulationSubSteps)
-	{
-		//clamp the number of substeps, to prevent simulation grinding spiralling down to a halt
-		int clampedSimulationSteps = (numSimulationSubSteps > maxSubSteps) ? maxSubSteps : numSimulationSubSteps;
 
-		// let us manually control when this happens
-		//saveKinematicState(fixedTimeStep * clampedSimulationSteps);
+	int numSubSteps;
+
+	//clamp the number of substeps, to prevent simulation grinding spiralling down to a halt
+	for (numSubSteps = 0; numSubSteps < maxSubSteps; numSubSteps++)
+	{
+		//fixed timestep with interpolation
+		const btScalar scaledTimeStep = fixedTimeStep / getTimeScale();
+		//m_fixedTimeStep only affects interpolation, simulation time step is unscaled
+		m_fixedTimeStep = scaledTimeStep;
+
+		if (m_localTime < scaledTimeStep)
+			break;
+
+		m_localTime -= scaledTimeStep;
+
+		//normally in bullet there'd be a saveKinematicState here, but we manually control that
 
 		applyGravity();
-
-		for (int i = 0; i < clampedSimulationSteps; i++)
-		{
-			internalSingleStepSimulation(fixedTimeStep);
-			synchronizeMotionStates();
-		}
-	}
-	else
-	{
-		synchronizeMotionStates();
+		internalSingleStepSimulation(fixedTimeStep);
+		clearForces();
 	}
 
-	clearForces();
+	synchronizeMotionStates();
 
 #ifndef BT_NO_PROFILE
 	CProfileManager::Increment_Frame_Counter();
 #endif  //BT_NO_PROFILE
 
-	return numSimulationSubSteps;
+	return numSubSteps;
+}
+
+void CustomBulletWorld::stepTicks(int subSteps, btScalar fixedTimeStep)
+{
+	startProfiling(0.);
+
+	//process some debugging flags
+	if (getDebugDrawer())
+	{
+		btIDebugDraw* debugDrawer = getDebugDrawer();
+		gDisableDeactivation = (debugDrawer->getDebugMode() & btIDebugDraw::DBG_NoDeactivation) != 0;
+	}
+
+	for (int numSubSteps = 0; numSubSteps < subSteps; numSubSteps++)
+	{
+		//normally in bullet there'd be a saveKinematicState here, but we manually control that
+
+		applyGravity();
+		internalSingleStepSimulation(fixedTimeStep);
+		clearForces();
+	}
+
+	synchronizeMotionStates();
+
+#ifndef BT_NO_PROFILE
+	CProfileManager::Increment_Frame_Counter();
+#endif  //BT_NO_PROFILE
 }
 
 void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
@@ -110,6 +110,7 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 	{
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
 		BulletSubsystem->TickCount++;
+		BulletSubsystem->SavedTimeScale = BulletSubsystem->BtWorld->getTimeScale();
 		BulletSubsystem->OnPhysicsTickDelegate.Broadcast(TimeStep);
 	}, this, true);
 
@@ -184,14 +185,8 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 	if (IsRollback())
 	{
 		TickCount = RollbackStartTick;
-
 		OnRollbackStartDelegate.Broadcast(GetTimeSeconds());
-
-		while (GetTickCount() < PreRollbackTickCount)
-		{
-			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
-		}
-
+		BtWorld->stepTicks(PreRollbackTickCount - GetTickCount(), FixedTimeStep);
 		bIsRollback = false;
 	}
 
@@ -199,21 +194,11 @@ void UBulletSubsystem::StepPhysics(float DeltaSeconds, float FixedTimeStep)
 
 	if (bIsSkipping)
 	{
-		while (GetTickCount() < TickToSkipTo)
-		{
-			BtWorld->stepSimulation(FixedTimeStep, 1, FixedTimeStep);
-		}
-
+		BtWorld->stepTicks(TickToSkipTo - GetTickCount(), FixedTimeStep);
 		bIsSkipping = false;
 	}
 
-	float TimeAccumulated = DeltaSeconds;
-
-	while (TimeAccumulated > 0.f)
-	{
-		BtWorld->stepSimulation(FMath::Min(TimeAccumulated, FixedTimeStep), 1, FixedTimeStep);
-		TimeAccumulated -= FixedTimeStep;
-	}
+	BtWorld->stepSimulation(DeltaSeconds, 64, FixedTimeStep);
 
 	if (GetTickCount() != PreUpdateTickCount)
 	{
