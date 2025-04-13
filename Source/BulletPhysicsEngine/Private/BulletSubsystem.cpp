@@ -145,9 +145,6 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem::GetWorld() returned null"));
 		return;
 	}
-
-	EnableDebugDrawer();
-	DebugEnabled = true;
 }
 
 void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
