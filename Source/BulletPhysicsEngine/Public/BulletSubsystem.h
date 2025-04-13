@@ -18,6 +18,7 @@
 #include "BulletSubsystem.generated.h"
 
 class ULandscapeComponent;
+class USplineMeshComponent;
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
@@ -379,6 +380,8 @@ private:
 		void ExtractPhysicsGeometry(UStaticMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
 
 		void ExtractPhysicsGeometry(USkeletalMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
+
+		void ExtractPhysicsGeometry(USplineMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
 
 		void ExtractPhysicsGeometry(UShapeComponent* Sc, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
 

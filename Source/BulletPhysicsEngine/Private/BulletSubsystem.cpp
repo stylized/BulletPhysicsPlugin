@@ -5,11 +5,12 @@
 #include "BulletPhysicsComponent.h"
 #include "BulletPhysicsEngine/bthelper.h"
 #include "BulletPlayerController.h"
-#include "Engine/EngineBaseTypes.h"
 #include "NetworkedPhysicsComponent.h"
 
 #include "Chaos/HeightField.h"
 #include "Chaos/ImplicitFwd.h"
+#include "Components/SplineMeshComponent.h"
+#include "Engine/EngineBaseTypes.h"
 #include "EngineUtils.h"
 #include "LandscapeComponent.h"
 #include "LandscapeDataAccess.h"
@@ -144,6 +145,9 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem::GetWorld() returned null"));
 		return;
 	}
+
+	EnableDebugDrawer();
+	DebugEnabled = true;
 }
 
 void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -428,6 +432,12 @@ void UBulletSubsystem::ExtractPhysicsGeometry(AActor* Actor, PhysicsGeometryCall
 		ExtractPhysicsGeometry(Cast<USkeletalMeshComponent>(Comp), InvActorTransform, CB);
 	}
 
+	Actor->GetComponents(USplineMeshComponent::StaticClass(), Components);
+	for (auto&& Comp : Components)
+	{
+		ExtractPhysicsGeometry(Cast<USplineMeshComponent>(Comp), InvActorTransform, CB);
+	}
+
 	// Collisions from separate collision components
 	Actor->GetComponents(UShapeComponent::StaticClass(), Components);
 	for (auto&& Comp : Components)
@@ -491,13 +501,9 @@ void UBulletSubsystem::ExtractPhysicsGeometry(ULandscapeComponent* LandscapeComp
 
 void UBulletSubsystem::ExtractPhysicsGeometry(UStaticMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
 {
-	UStaticMesh* Mesh = SMC->GetStaticMesh();
-	if (!Mesh)
-		return;
-
 	// We want the complete transform from actor to this component, not just relative to parent
 	FTransform CompFullRelXForm = SMC->GetComponentTransform() * InvActorXform;
-	ExtractPhysicsGeometry(CompFullRelXForm, Mesh->GetBodySetup(), CB);
+	ExtractPhysicsGeometry(CompFullRelXForm, SMC->GetBodySetup(), CB);
 
 	// Not supporting complex collision shapes right now
 	// If we did, note that Mesh->ComplexCollisionMesh is WITH_EDITORONLY_DATA so not available at runtime
@@ -524,6 +530,12 @@ void UBulletSubsystem::ExtractPhysicsGeometry(USkeletalMeshComponent* SMC, const
 	}
 }
 
+void UBulletSubsystem::ExtractPhysicsGeometry(USplineMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
+{
+	// We want the complete transform from actor to this component, not just relative to parent
+	FTransform CompFullRelXForm = SMC->GetComponentTransform() * InvActorXform;
+	ExtractPhysicsGeometry(CompFullRelXForm, SMC->GetBodySetup(), CB);
+}
 
 void UBulletSubsystem::ExtractPhysicsGeometry(UShapeComponent* Sc, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
 {
@@ -535,6 +547,11 @@ void UBulletSubsystem::ExtractPhysicsGeometry(UShapeComponent* Sc, const FTransf
 
 void UBulletSubsystem::ExtractPhysicsGeometry(const FTransform& XformSoFar, UBodySetup* BodySetup, PhysicsGeometryCallback CB)
 {
+	if (BodySetup == nullptr)
+	{
+		return;
+	}
+
 	FVector Scale = XformSoFar.GetScale3D();
 	btCollisionShape* Shape = nullptr;
 
