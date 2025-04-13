@@ -17,6 +17,8 @@
 
 #include "BulletSubsystem.generated.h"
 
+class ULandscapeComponent;
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FRayTestSingleCallback, const FVector&, To, const FVector&, From, bool&, HasHit);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPhysicsTick, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPostPhysicsTick, float);
@@ -371,6 +373,8 @@ private:
 		void ExtractPhysicsGeometry(AActor* Actor, PhysicsGeometryCallback CB);
 
 		btCollisionObject* AddStaticCollision(btCollisionShape* Shape, const FTransform& Transform, float Friction, float Restitution, AActor* Actor);
+
+		void ExtractPhysicsGeometry(ULandscapeComponent* LandscapeComponent, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
 
 		void ExtractPhysicsGeometry(UStaticMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB);
 

@@ -8,7 +8,12 @@
 #include "Engine/EngineBaseTypes.h"
 #include "NetworkedPhysicsComponent.h"
 
+#include "Chaos/HeightField.h"
+#include "Chaos/ImplicitFwd.h"
 #include "EngineUtils.h"
+#include "LandscapeComponent.h"
+#include "LandscapeDataAccess.h"
+#include "LandscapeHeightfieldCollisionComponent.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/SkeletalBodySetup.h"
 
@@ -139,7 +144,6 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 		UE_LOG(LogTemp, Warning, TEXT("UBulletSubsystem::GetWorld() returned null"));
 		return;
 	}
-
 }
 
 void UBulletSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -430,9 +434,60 @@ void UBulletSubsystem::ExtractPhysicsGeometry(AActor* Actor, PhysicsGeometryCall
 	{
 		ExtractPhysicsGeometry(Cast<UShapeComponent>(Comp), InvActorTransform, CB);
 	}
+
+	Actor->GetComponents(ULandscapeComponent::StaticClass(), Components);
+	for (auto&& Comp : Components)
+	{
+		ExtractPhysicsGeometry(Cast<ULandscapeComponent>(Comp), InvActorTransform, CB);
+	}
 }
 
+void UBulletSubsystem::ExtractPhysicsGeometry(ULandscapeComponent* LandscapeComponent, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
+{
+	ULandscapeHeightfieldCollisionComponent* LandscapeCollision = LandscapeComponent->GetCollisionComponent();
+	Chaos::FHeightFieldPtr Heightfield = LandscapeCollision->HeightfieldRef->HeightfieldGeometry;
 
+	if (!Heightfield.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("UBulletSubsystem: Couldn't add landscape collision due to invalid heightfield pointer"));
+		return;
+	}
+
+	const float XYScale = LandscapeCollision->CollisionScale;
+	const FVector Scale = LandscapeCollision->GetComponentScale() * FVector(XYScale, XYScale, LANDSCAPE_ZSCALE);
+
+	const auto GetVertex = [Heightfield, Scale](int32 X, int32 Y)
+	{
+		return FVector(X, Y, Heightfield->GetHeight(X, Y)) * Scale;
+	};
+
+	const int32 QuadsX = Heightfield->GetNumCols() - 1;
+	const int32 QuadsY = Heightfield->GetNumRows() - 1;
+
+	TArray<FVector> QuadVertices[4];
+
+	for (int32 Index = 0; Index < 4; Index++)
+	{
+		QuadVertices[Index].SetNumUninitialized(QuadsX * QuadsY);
+	}
+
+	int32 QuadIndex = 0;
+
+	for (int32 Y = 0; Y < QuadsY; Y++)
+	{
+		for (int32 X = 0; X < QuadsX; X++)
+		{
+			QuadVertices[0][QuadIndex] = GetVertex(X,     Y    );
+			QuadVertices[1][QuadIndex] = GetVertex(X + 1, Y    );
+			QuadVertices[2][QuadIndex] = GetVertex(X + 1, Y + 1);
+			QuadVertices[3][QuadIndex] = GetVertex(X,     Y + 1);
+			QuadIndex++;
+		}
+	}
+
+	btCollisionShape* Shape = GetTriangleMeshShape(QuadVertices[0], QuadVertices[1], QuadVertices[2], QuadVertices[3]);
+	CB(Shape, LandscapeCollision->GetRelativeTransform());
+}
 
 void UBulletSubsystem::ExtractPhysicsGeometry(UStaticMeshComponent* SMC, const FTransform& InvActorXform, PhysicsGeometryCallback CB)
 {
