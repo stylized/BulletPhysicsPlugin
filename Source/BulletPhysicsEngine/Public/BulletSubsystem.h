@@ -56,13 +56,9 @@ struct FClosestConvexResultWithExclude : btCollisionWorld::ClosestConvexResultCa
 	{
 	}
 
-	virtual btScalar addSingleResult(btCollisionWorld::LocalConvexResult& convexResult, bool normalInWorldSpace) override
+	virtual bool needsCollision(btBroadphaseProxy* proxy0) const override
 	{
-		if (convexResult.m_hitCollisionObject == m_excludeObject)
-		{
-			return 1.0;
-		}
-		return btCollisionWorld::ClosestConvexResultCallback::addSingleResult(convexResult, normalInWorldSpace);
+		return proxy0->m_clientObject != m_excludeObject;
 	}
 
 	const btCollisionObject* m_excludeObject;
