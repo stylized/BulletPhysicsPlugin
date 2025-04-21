@@ -128,6 +128,7 @@ void UBulletSubsystem::Initialize(FSubsystemCollectionBase& Collection){
 		auto* BulletSubsystem = reinterpret_cast<UBulletSubsystem*>(BtWorld->getWorldUserInfo());
 		BulletSubsystem->TickCount++;
 		BulletSubsystem->SavedTimeScale = BulletSubsystem->BtWorld->getTimeScale();
+		BulletSubsystem->OnPrePhysicsTickDelegate.Broadcast(TimeStep);
 		BulletSubsystem->OnPhysicsTickDelegate.Broadcast(TimeStep);
 	}, this, true);
 

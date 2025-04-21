@@ -5,6 +5,7 @@ void UBulletPhysicsComponent::BeginPlay()
 	Super::BeginPlay();
 
 	BulletSubsystem = GetWorld()->GetSubsystem<UBulletSubsystem>();
+	BulletSubsystem->OnPrePhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::PreTickPhysics);
 	BulletSubsystem->OnPhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::TickPhysics);
 	BulletSubsystem->OnPostPhysicsTickDelegate.AddUObject(this, &UBulletPhysicsComponent::PostTickPhysics);
 	BulletSubsystem->OnPostPhysicsFrameDelegate.AddUObject(this, &UBulletPhysicsComponent::PostPhysicsFrame);
@@ -191,6 +192,11 @@ void UBulletPhysicsComponent::SetMass(float NewMass)
 	btVector3 Inertia;
 	RigidBody->getCollisionShape()->calculateLocalInertia(NewMass, Inertia);
 	RigidBody->setMassProps(NewMass, Inertia);
+}
+
+void UBulletPhysicsComponent::PreTickPhysics(float DeltaTime)
+{
+	OnPreTickPhysics.Broadcast(DeltaTime);
 }
 
 void UBulletPhysicsComponent::TickPhysics(float DeltaTime)

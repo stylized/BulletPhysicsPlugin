@@ -28,6 +28,7 @@ public class BulletPhysicsEngineLibrary : ModuleRules
 		//Don't forget to take out the definition
 		// #define BT_USE_DOUBLE_PRECISION in BulletMain.h if you disable DOUBLE_PRECISION
 		// TODO: Too lazy to add it as a definition here.
+		cmakeOptions += " -DBULLET2_MULTITHREADING=1 ";
 		cmakeOptions += " -DINSTALL_LIBS=0 ";
 		cmakeOptions += " -DINSTALL_EXTRA_LIBS=0 ";
 		cmakeOptions += " -DLIBRARY_OUTPUT_PATH=\""+LibOutputPath + "\"";

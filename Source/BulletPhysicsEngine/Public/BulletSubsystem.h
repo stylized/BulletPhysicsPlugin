@@ -123,6 +123,8 @@ UCLASS()
 	GENERATED_BODY()
 
 	public:
+		/// Called before each Bullet physics tick before OnPhysicsTickDelegate, used to queue async processing for OnPhysicsTick to use
+		FOnPhysicsTick OnPrePhysicsTickDelegate;
 		/// Called before each Bullet physics tick, used to add forces
 		FOnPhysicsTick OnPhysicsTickDelegate;
 		/// Called after each Bullet physics tick and after collision notify
